@@ -4,7 +4,7 @@ if NOT EXIST ".venv\Scripts\activate.bat" (
 if NOT EXIST ".venv" (
     python -m venv ".venv"
 )
-.\.venv\Scripts\activate.bat
+call ".venv\Scripts\activate.bat"
 pip install -r requirements.txt
 pip install pyinstaller
 python build.py
