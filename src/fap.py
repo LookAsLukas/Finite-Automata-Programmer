@@ -1,29 +1,13 @@
 import flet as ft
-from automata.fa.dfa import DFA
-from automata.fa.nfa import NFA
-from typing import Dict, List, Tuple, Optional
+from typing import List, Tuple
+from automata_runner import AutomataRunner
+from automata_builder import AutomataBuilder
+from graph import State
 import math
 
-class State:
-    def __init__(self, id: int, x: float, y: float, is_start: bool = False, is_final: bool = False):
-        self.id = id
-        self.x = x
-        self.y = y
-        self.is_start = is_start
-        self.is_final = is_final
-        self.radius = 25
-
-class Transition:
-    def __init__(self, from_state: int, to_state: int, symbol: str):
-        self.from_state = from_state
-        self.to_state = to_state
-        self.symbol = symbol
-
-class AutomataBuilder:
+class AutomataProgrammer:
     def __init__(self):
-        self.states: Dict[int, State] = {}
-        self.transitions: List[Transition] = []
-        self.next_state_id = 0
+        self.builder = AutomataBuilder()
         self.selected_state = None
         self.dragging = False
         self.page = None
@@ -37,221 +21,11 @@ class AutomataBuilder:
         self.transition_mode = False
         self.transition_start_state = None
     
-    def add_state(self, x: float, y: float) -> int:
-        state_id = self.next_state_id
-        self.states[state_id] = State(state_id, x, y)
-        self.next_state_id += 1
-        return state_id
-    
-    def remove_state(self, state_id: int):
-        if state_id in self.states:
-            del self.states[state_id]
-        self.transitions = [t for t in self.transitions 
-                          if t.from_state != state_id and t.to_state != state_id]
-    
-    def add_transition(self, from_state: int, to_state: int, symbol: str):
-        # Remove existing transition between same states with same symbol
-        self.transitions = [t for t in self.transitions 
-                          if not (t.from_state == from_state and t.to_state == to_state and t.symbol == symbol)]
-        
-        transition = Transition(from_state, to_state, symbol)
-        self.transitions.append(transition)
-    
-    def set_start_state(self, state_id: int):
-        if state_id in self.states:
-            # Remove start state from all other states
-            for state in self.states.values():
-                state.is_start = False
-            self.states[state_id].is_start = True
-    
-    def set_final_state(self, state_id: int):
-        if state_id in self.states:
-            self.states[state_id].is_final = True
-    
-    def set_normal_state(self, state_id: int):
-        if state_id in self.states:
-            self.states[state_id].is_start = False
-            self.states[state_id].is_final = False
-    
-    def build_dfa(self) -> Optional[DFA]:
-        """Build a DFA from the current graph"""
-        try:
-            # Get states
-            states = set(str(state_id) for state_id in self.states.keys())
-            
-            # Get input symbols
-            input_symbols = set()
-            for transition in self.transitions:
-                if transition.symbol and transition.symbol != "ε":
-                    input_symbols.add(transition.symbol)
-            
-            if not input_symbols:
-                input_symbols = {'a', 'b'}  # Default symbols
-            
-            # Get transitions
-            transitions = {}
-            for transition in self.transitions:
-                from_state = str(transition.from_state)
-                to_state = str(transition.to_state)
-                symbol = transition.symbol
-                
-                if symbol == "ε":
-                    continue  # Skip epsilon transitions for DFA
-                
-                if from_state not in transitions:
-                    transitions[from_state] = {}
-                transitions[from_state][symbol] = to_state
-            
-            # Get initial state
-            initial_state = None
-            for state_id, state in self.states.items():
-                if state.is_start:
-                    initial_state = str(state_id)
-                    break
-            
-            if not initial_state:
-                return None
-            
-            # Get final states
-            final_states = set()
-            for state_id, state in self.states.items():
-                if state.is_final:
-                    final_states.add(str(state_id))
-            
-            return DFA(
-                states=states,
-                input_symbols=input_symbols,
-                transitions=transitions,
-                initial_state=initial_state,
-                final_states=final_states
-            )
-        except Exception as e:
-            print(f"Error building DFA: {e}")
-            return None
-    
-    def build_nfa(self) -> Optional[NFA]:
-        """Build an NFA from the current graph"""
-        try:
-            # Get states
-            states = set(str(state_id) for state_id in self.states.keys())
-            
-            # Get input symbols
-            input_symbols = set()
-            for transition in self.transitions:
-                if transition.symbol:
-                    input_symbols.add(transition.symbol)
-            
-            if not input_symbols:
-                input_symbols = {'a', 'b'}  # Default symbols
-            
-            # Get transitions
-            transitions = {}
-            for transition in self.transitions:
-                from_state = str(transition.from_state)
-                to_state = str(transition.to_state)
-                symbol = transition.symbol
-                
-                if from_state not in transitions:
-                    transitions[from_state] = {}
-                if symbol not in transitions[from_state]:
-                    transitions[from_state][symbol] = set()
-                transitions[from_state][symbol].add(to_state)
-            
-            # Get initial state
-            initial_state = None
-            for state_id, state in self.states.items():
-                if state.is_start:
-                    initial_state = str(state_id)
-                    break
-            
-            if not initial_state:
-                return None
-            
-            # Get final states
-            final_states = set()
-            for state_id, state in self.states.items():
-                if state.is_final:
-                    final_states.add(str(state_id))
-            
-            return NFA(
-                states=states,
-                input_symbols=input_symbols,
-                transitions=transitions,
-                initial_state=initial_state,
-                final_states=final_states
-            )
-        except Exception as e:
-            print(f"Error building NFA: {e}")
-            return None
-    
     def run_automata(self, input_string: str) -> Tuple[bool, List]:
         """Run the automata on input string"""
         if self.mode == "DFA":
-            dfa = self.build_dfa()
-            if dfa is None:
-                return False, ["Error: Invalid DFA configuration"]
-            
-            try:
-                # Validate input symbols
-                for symbol in input_string:
-                    if symbol not in dfa.input_symbols:
-                        return False, [f"Error: Symbol '{symbol}' not in input symbols {dfa.input_symbols}"]
-                
-                # Run DFA
-                is_accepted = dfa.accepts_input(input_string)
-                
-                # Get path (simulate step by step)
-                path = []
-                current_state = dfa.initial_state
-                path.append(int(current_state))
-                
-                for symbol in input_string:
-                    if current_state in dfa.transitions and symbol in dfa.transitions[current_state]:
-                        current_state = dfa.transitions[current_state][symbol]
-                        path.append(int(current_state))
-                    else:
-                        path.append(-1)  # Invalid state
-                        break
-                
-                return is_accepted, path
-                
-            except Exception as e:
-                return False, [f"Error: {str(e)}"]
-        
-        else:  # NFA
-            nfa = self.build_nfa()
-            if nfa is None:
-                return False, ["Error: Invalid NFA configuration"]
-            
-            try:
-                # Validate input symbols (skip epsilon)
-                for symbol in input_string:
-                    if symbol != "ε" and symbol not in nfa.input_symbols:
-                        return False, [f"Error: Symbol '{symbol}' not in input symbols {nfa.input_symbols}"]
-                
-                # Run NFA
-                is_accepted = nfa.accepts_input(input_string)
-                
-                # Get possible states at each step
-                state_sets = []
-                current_states = {nfa.initial_state}
-                state_sets.append(set(int(s) for s in current_states))
-                for symbol in input_string:
-                    next_states = set()
-                    for state in current_states:
-                        if state in nfa.transitions and symbol in nfa.transitions[state]:
-                            next_states.update(nfa.transitions[state][symbol])
-                    # Get epsilon closure
-                    if next_states:
-                        current_states = next_states
-                    else:
-                        current_states = set()
-                    state_sets.append(set(int(s) for s in current_states))
-                
-                return is_accepted, state_sets
-                
-            except Exception as e:
-                return False, [f"Error: {str(e)}"]
+            return AutomataRunner.run_dfa(self.builder.build_dfa(), input_string)
+        return AutomataRunner.run_nfa(self.builder.build_nfa(), input_string)
     
     def main(self, page: ft.Page):
         self.page = page
@@ -393,17 +167,17 @@ class AutomataBuilder:
     
     def start_state_setter(self):
         if self.selected_state is not None:
-            self.set_start_state(self.selected_state)
+            self.builder.set_start_state(self.selected_state)
             self.status_text.value = f"State {self.selected_state} set as START"
     
     def final_state_setter(self):
         if self.selected_state is not None:
-            self.set_final_state(self.selected_state)
+            self.builder.set_final_state(self.selected_state)
             self.status_text.value = f"State {self.selected_state} set as FINAL"
     
     def normal_state_setter(self):
         if self.selected_state is not None:
-            self.set_normal_state(self.selected_state)
+            self.builder.set_normal_state(self.selected_state)
             self.status_text.value = f"State {self.selected_state} set as NORMAL"
     
     def toggle_transition_mode(self):
@@ -418,7 +192,7 @@ class AutomataBuilder:
     def delete_selected_state(self):
         if self.selected_state is not None:
             state_id = self.selected_state
-            self.remove_state(state_id)
+            self.builder.remove_state(state_id)
             self.selected_state = None
             self.status_text.value = f"Deleted state {state_id}"
     
@@ -434,9 +208,9 @@ class AutomataBuilder:
         self.page.update()
     
     def clear_all(self, e):
-        self.states.clear()
-        self.transitions.clear()
-        self.next_state_id = 0
+        self.builder.states.clear()
+        self.builder.transitions.clear()
+        self.builder.next_state_id = 0
         self.selected_state = None
         self.add_state_mode = False
         self.transition_mode = False
@@ -453,7 +227,7 @@ class AutomataBuilder:
         x, y = e.local_x or 0, e.local_y or 0
         
         # Check if clicking on a state
-        for state_id, state in self.states.items():
+        for state_id, state in self.builder.states.items():
             if self.distance(x, y, state.x, state.y) <= state.radius:
                 self.selected_state = state_id
                 self.dragging = True
@@ -468,7 +242,7 @@ class AutomataBuilder:
                         # Second click - create transition
                         if self.transition_start_state != state_id:
                             symbol = self.symbol_field.value or "a"
-                            self.add_transition(self.transition_start_state, state_id, symbol)
+                            self.builder.add_transition(self.transition_start_state, state_id, symbol)
                             self.status_text.value = f"Added transition {self.transition_start_state} → {state_id} with '{symbol}'"
                         else:
                             self.status_text.value = "Cannot create transition to same state"
@@ -484,7 +258,7 @@ class AutomataBuilder:
         
         # If no state clicked and we're in add state mode
         if self.add_state_mode:
-            state_id = self.add_state(x, y)
+            state_id = self.builder.add_state(x, y)
             self.selected_state = state_id
             self.dragging = True
             self.add_state_mode = False
@@ -493,7 +267,7 @@ class AutomataBuilder:
     
     def on_pan_update(self, e: ft.DragUpdateEvent):
         if self.dragging and self.selected_state is not None:
-            state = self.states[self.selected_state]
+            state = self.builder.states[self.selected_state]
             state.x += e.delta_x
             state.y += e.delta_y
             self.update_canvas()
@@ -510,7 +284,7 @@ class AutomataBuilder:
         
         # Handle transition mode
         if self.transition_mode:
-            for state_id, state in self.states.items():
+            for state_id, state in self.builder.states.items():
                 if self.distance(x, y, state.x, state.y) <= state.radius:
                     if self.transition_start_state is None:
                         # First click - set source state
@@ -521,7 +295,7 @@ class AutomataBuilder:
                         # Second click - create transition
                         if self.transition_start_state != state_id:
                             symbol = self.symbol_field.value or "a"
-                            self.add_transition(self.transition_start_state, state_id, symbol)
+                            self.builder.add_transition(self.transition_start_state, state_id, symbol)
                             self.status_text.value = f"Added transition {self.transition_start_state} → {state_id} with '{symbol}'"
                         else:
                             self.status_text.value = "Cannot create transition to same state"
@@ -534,7 +308,7 @@ class AutomataBuilder:
                     return
         
         # Regular click (not in transition mode)
-        for state_id, state in self.states.items():
+        for state_id, state in self.builder.states.items():
             if self.distance(x, y, state.x, state.y) <= state.radius:
                 self.selected_state = state_id
                 self.status_text.value = f"Selected state {state_id} (S:Start, E:Final, N:Normal, T:Transition)"
@@ -560,9 +334,9 @@ class AutomataBuilder:
         canvas_content = []
         
         # Draw transitions
-        for transition in self.transitions:
-            from_state = self.states[transition.from_state]
-            to_state = self.states[transition.to_state]
+        for transition in self.builder.transitions:
+            from_state = self.builder.states[transition.from_state]
+            to_state = self.builder.states[transition.to_state]
             
             # Calculate line properties
             dx = to_state.x - from_state.x
@@ -640,7 +414,7 @@ class AutomataBuilder:
             canvas_content.append(symbol_text)
         
         # Draw states
-        for state_id, state in self.states.items():
+        for state_id, state in self.builder.states.items():
             # Determine state color
             if state.is_start and state.is_final:
                 color = ft.Colors.PURPLE
@@ -732,7 +506,7 @@ class AutomataBuilder:
             self.page.update()
             return
         
-        if not any(state.is_start for state in self.states.values()):
+        if not any(state.is_start for state in self.builder.states.values()):
             self.result_text.value = "No start state defined!"
             self.result_text.color = ft.Colors.RED
             self.page.update()
@@ -754,7 +528,7 @@ class AutomataBuilder:
         self.page.update()
 
 def main():
-    ft.app(target=AutomataBuilder().main)
+    ft.app(target=AutomataProgrammer().main)
 
 if __name__ == "__main__":
     main()

@@ -10,7 +10,7 @@ def build_app():
     
     # Get the current directory
     current_dir = Path(__file__).parent
-    main_script = current_dir / "fap.py"
+    main_script = current_dir / "src" / "fap.py"
     
     if not main_script.exists():
         print(f"Error: Main script {main_script} not found!")
