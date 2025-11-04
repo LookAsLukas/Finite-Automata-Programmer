@@ -1,5 +1,6 @@
-import flet
 import math
+from typing import Optional
+import flet
 from flet import (
     Page,
     Text,
@@ -16,10 +17,11 @@ from flet import (
     canvas,
     GestureDetector,
     TextStyle,
-    FontWeight
+    FontWeight,
 )
 from automata.fa.nfa import NFA
-from automata_io import save_automaton_to_json
+from automata_io import save_automaton_to_json, load_automaton_from_json
+from automata_visualizer import prepare_automaton_layout
 
 
 def main(page: Page):
@@ -29,6 +31,7 @@ def main(page: Page):
     page.bgcolor = Colors.BLUE_GREY_50
 
     nodes = []
+    state_names = []
     node_counter = 0
     start_state_index = None
     final_states = set()
@@ -38,6 +41,13 @@ def main(page: Page):
     placing_mode = False
     transition_mode = False
     alphabet = set()
+
+    def state_label(index: Optional[int]) -> str:
+        if index is None:
+            return ""
+        if 0 <= index < len(state_names):
+            return state_names[index]
+        return f"q{index}"
 
     # --- UI элементы ---
     word_input = TextField(label="Слово для проверки", width=400)
@@ -50,17 +60,24 @@ def main(page: Page):
 
     # ---------- Создание объекта NFA ----------
     def build_nfa_from_ui(nodes, transitions, start_state_index, final_states, alphabet):
-        states = {f"q{i}" for i in range(len(nodes))}
-        initial_state = f"q{start_state_index}" if start_state_index is not None else None
-        final_state_names = {f"q{i}" for i in final_states}
+        if not nodes or start_state_index is None:
+            return None
+
+        states = set(state_names)
+        initial_state = state_names[start_state_index]
+        final_state_names = {state_names[i] for i in final_states}
 
         nfa_transitions = {}
-        for start, trans_list in transitions.items():
-            nfa_transitions[start] = {}
+        for start_index, trans_list in transitions.items():
+            start_name = state_names[start_index]
+            nfa_transitions[start_name] = {}
             for t in trans_list:
                 symbol = t["symbol"]
-                end = t["end"]
-                nfa_transitions[start].setdefault(symbol, set()).add(end)
+                end_name = state_names[t["end"]]
+                nfa_transitions[start_name].setdefault(symbol, set()).add(end_name)
+
+        for name in state_names:
+            nfa_transitions.setdefault(name, {})
 
         return NFA(
             states=states,
@@ -77,6 +94,10 @@ def main(page: Page):
             page.update()
             return
         nfa = build_nfa_from_ui(nodes, transitions, start_state_index, final_states, alphabet)
+        if nfa is None:
+            status_text.value = "Автомат неполный — добавьте состояния!"
+            page.update()
+            return
         word = word_input.value.strip()
         if not word:
             status_text.value = "Введите слово!"
@@ -109,6 +130,10 @@ def main(page: Page):
 
         try:
             nfa = build_nfa_from_ui(nodes, transitions, start_state_index, final_states, alphabet)
+            if nfa is None:
+                status_text.value = "Автомат неполный — экспорт невозможен!"
+                page.update()
+                return
             export_path = "nfa.json"
             save_automaton_to_json(nfa, export_path)
             status_text.value = f"✅ NFA экспортирован в файл {export_path}"
@@ -116,9 +141,40 @@ def main(page: Page):
             status_text.value = f"Ошибка экспорта: {err}"
         page.update()
 
+    def import_automaton(e):
+        nonlocal nodes, state_names, transitions, final_states, start_state_index, alphabet, node_counter, placing_mode, transition_mode, selected_node, first_selected_node
+        automaton = load_automaton_from_json("nfa.json")
+        if automaton is None:
+            status_text.value = "Не удалось загрузить автомат из nfa.json"
+            page.update()
+            return
+
+        layout = prepare_automaton_layout(automaton, canvas_width=700, canvas_height=450)
+        layout_nodes, layout_state_names, layout_transitions, layout_final_states, layout_start_index, layout_alphabet = layout
+
+        nodes = list(layout_nodes)
+        state_names = list(layout_state_names)
+        transitions = {idx: [dict(t) for t in trans_list] for idx, trans_list in layout_transitions.items()}
+        final_states = set(layout_final_states)
+        start_state_index = layout_start_index
+        alphabet = set(layout_alphabet)
+        node_counter = len(state_names)
+        placing_mode = False
+        transition_mode = False
+        selected_node = None
+        first_selected_node = None
+
+        alphabet_display.value = f"Алфавит: {', '.join(sorted(alphabet))}" if alphabet else "Алфавит: ∅"
+        mode_status.value = "Режим размещения: выключен"
+        transition_status.value = "Режим переходов: выключен"
+        status_text.value = "✅ Автомат импортирован из dist/nfa.json"
+
+        draw_nodes()
+        page.update()
+
     # ---------- Графика ----------
     def draw_nodes():
-        elements = []
+        node_elements = []
         for i, (x, y) in enumerate(nodes):
             if i == start_state_index:
                 color = Colors.LIGHT_GREEN_300
@@ -128,28 +184,32 @@ def main(page: Page):
                 color = Colors.AMBER_100
 
             circle = canvas.Circle(x=x, y=y, radius=30, paint=flet.Paint(color))
-            elements.append(circle)
+            node_elements.append(circle)
             if selected_node == i:
-                elements.append(canvas.Circle(
+                node_elements.append(canvas.Circle(
                     x=x, y=y, radius=30,
                     paint=flet.Paint(Colors.BLUE_800, style="stroke", stroke_width=3)
                 ))
-            text = canvas.Text(x=x - 8, y=y - 10, text=f"q{i}", style=TextStyle(weight=FontWeight.BOLD))
-            elements.append(text)
+            label = state_label(i)
+            text_offset = len(label) * 4
+            text = canvas.Text(x=x - text_offset, y=y - 10, text=label, style=TextStyle(weight=FontWeight.BOLD))
+            node_elements.append(text)
 
-        drawing_area.shapes = elements
-        draw_transitions()
+        transition_elements = collect_transition_elements()
+        drawing_area.shapes = node_elements + transition_elements
         drawing_area.update()
 
-    def draw_transitions():
+    def collect_transition_elements():
         elements = []
-        for start, trans_list in transitions.items():
-            start_index = int(start.replace("q", ""))
+        for start_index, trans_list in transitions.items():
+            if start_index >= len(nodes):
+                continue
             (x1, y1) = nodes[start_index]
             for t in trans_list:
                 symbol = t["symbol"]
-                end = t["end"]
-                end_index = int(end.replace("q", ""))
+                end_index = t["end"]
+                if end_index >= len(nodes):
+                    continue
                 (x2, y2) = nodes[end_index]
                 dx, dy = x2 - x1, y2 - y1
                 length = math.sqrt(dx ** 2 + dy ** 2)
@@ -187,7 +247,7 @@ def main(page: Page):
                 )
                 elements.append(label)
 
-        drawing_area.shapes.extend(elements)
+        return elements
 
     # ---------- Обработчики ----------
     def add_node(e):
@@ -196,6 +256,7 @@ def main(page: Page):
             return
         x, y = e.local_x, e.local_y
         nodes.append((x, y))
+        state_names.append(f"q{node_counter}")
         node_counter += 1
         draw_nodes()
 
@@ -214,18 +275,18 @@ def main(page: Page):
         clicked = get_clicked_node(x, y)
         if clicked is not None:
             selected_node = clicked
-            status_text.value = f"Выбран узел q{clicked}"
+            status_text.value = f"Выбран узел {state_label(clicked)}"
         if transition_mode and clicked is not None:
             if first_selected_node is None:
                 first_selected_node = clicked
-                transition_status.value = f"Начало перехода: q{clicked}"
+                transition_status.value = f"Начало перехода: {state_label(clicked)}"
             else:
-                start = f"q{first_selected_node}"
-                end = f"q{clicked}"
                 symbol = next(iter(alphabet)) if alphabet else "a"
-                transitions.setdefault(start, []).append({"symbol": symbol, "end": end})
+                transitions.setdefault(first_selected_node, []).append({"symbol": symbol, "end": clicked})
+                start_name = state_label(first_selected_node)
+                end_name = state_label(clicked)
                 first_selected_node = None
-                transition_status.value = f"Добавлен переход {start} → {end} по '{symbol}'"
+                transition_status.value = f"Добавлен переход {start_name} → {end_name} по '{symbol}'"
         draw_nodes()
         page.update()
 
@@ -257,10 +318,10 @@ def main(page: Page):
             return
         if start_state_index == selected_node:
             start_state_index = None
-            status_text.value = f"q{selected_node} больше не начальное"
+            status_text.value = f"{state_label(selected_node)} больше не начальное"
         else:
             start_state_index = selected_node
-            status_text.value = f"q{selected_node} теперь начальное"
+            status_text.value = f"{state_label(selected_node)} теперь начальное"
         draw_nodes()
         page.update()
 
@@ -271,10 +332,10 @@ def main(page: Page):
             return
         if selected_node in final_states:
             final_states.remove(selected_node)
-            status_text.value = f"q{selected_node} больше не конечное"
+            status_text.value = f"{state_label(selected_node)} больше не конечное"
         else:
             final_states.add(selected_node)
-            status_text.value = f"q{selected_node} теперь конечное"
+            status_text.value = f"{state_label(selected_node)} теперь конечное"
         draw_nodes()
         page.update()
 
@@ -292,6 +353,7 @@ def main(page: Page):
     def clear_automaton(e):
         nonlocal node_counter, start_state_index, placing_mode, transition_mode, selected_node, first_selected_node
         nodes.clear()
+        state_names.clear()
         node_counter = 0
         transitions.clear()
         final_states.clear()
@@ -316,6 +378,7 @@ def main(page: Page):
     final_button = ElevatedButton("Переключить конечное состояние", on_click=toggle_final_state)
     run_button = ElevatedButton("Обработать слово", on_click=handle_run)
     export_button = ElevatedButton("Экспортировать NFA", on_click=export_nfa)
+    import_button = ElevatedButton("Импортировать автомат", on_click=import_automaton)
     add_alphabet_button = ElevatedButton("Добавить символ", on_click=add_alphabet_symbol)
     clear_button = ElevatedButton("Очистить автомат", on_click=clear_automaton)
 
@@ -340,7 +403,7 @@ def main(page: Page):
                             Text("Визуальный автомат (NFA)", size=24, weight="bold"),
                             graph_area,
                             Column([mode_status, transition_status, status_text], spacing=5),
-                            Row([word_input, run_button, export_button], spacing=10),
+                            Row([word_input, run_button, export_button, import_button], spacing=10),
                         ],
                         spacing=15,
                     ),
