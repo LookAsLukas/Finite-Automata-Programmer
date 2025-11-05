@@ -1,4 +1,5 @@
 *.spec
 dist/**
 build/**
+htmlcov_report/
 .venv
