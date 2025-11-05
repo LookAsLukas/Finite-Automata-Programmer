@@ -249,7 +249,6 @@ def main(page: Page):
         return None, None
 
     def edit_transition_symbol(start, transition):
-        """Открывает диалоговое окно для изменения символа перехода."""
         def on_submit(e):
             new_symbol = input_field.value.strip()
             if not new_symbol:
