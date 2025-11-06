@@ -1,5 +1,5 @@
-import flet
 import math
+import flet
 from flet import (
     Page,
     Text,
@@ -22,8 +22,8 @@ from flet import (
 
 
 def main(page: Page):
-    page.title = "FAP"
-    page.window_width = 800
+    page.title = "FAP — Визуальный конструктор НКА"
+    page.window_width = 900
     page.window_height = 600
     page.bgcolor = Colors.BLUE_GREY_50
 
@@ -37,13 +37,16 @@ def main(page: Page):
     first_selected_node = None
     placing_mode = False
     transition_mode = False
+    alphabet = set()
 
-    word_input = TextField(label="Слово для обработки", hint_text="Введите слово...", width=535)
-
+    # UI элементы
+    word_input = TextField(label="Слово для проверки", width=400)
+    alphabet_input = TextField(label="Добавить символ", hint_text="Введите один символ...", width=150)
     drawing_area = canvas.Canvas(width=700, height=450)
     mode_status = Text("Режим размещения: выключен", size=16, color=Colors.GREY_800)
-    transition_status = Text("Режим рисования переходов: выключен", size=16, color=Colors.GREY_800)
-    status_text = Text("Выберите узел или кликните, чтобы добавить новый узел", size=16, color=Colors.GREY_800)
+    transition_status = Text("Режим переходов: выключен", size=16, color=Colors.GREY_800)
+    status_text = Text("Добавьте состояния или переходы", size=16, color=Colors.GREY_800)
+    alphabet_display = Text("Алфавит: ∅", size=16, color=Colors.BLUE_800)
 
     def draw_nodes():
         elements = []
@@ -79,11 +82,15 @@ def main(page: Page):
     def draw_transitions():
         elements = []
         for start, trans_list in transitions.items():
+            if start not in nodes:
+                continue
             (x1, y1) = nodes[start]
 
             for t in trans_list:
                 symbol = t["symbol"]
                 end = t["end"]
+                if end not in nodes:
+                    continue
                 (x2, y2) = nodes[end]
                 dx, dy = x2 - x1, y2 - y1
                 length = math.sqrt(dx ** 2 + dy ** 2)
@@ -191,7 +198,6 @@ def main(page: Page):
 
         page.open(dialog) 
 
-
     def handle_canvas_click(e):
         nonlocal first_selected_node, selected_node
         x, y = e.local_x, e.local_y
@@ -208,7 +214,8 @@ def main(page: Page):
             else:
                 start = first_selected_node
                 end = clicked
-                transitions.setdefault(start, []).append({"symbol": "a", "end": end})
+                symbol = next(iter(alphabet)) if alphabet else "a"
+                transitions.setdefault(start, []).append({"symbol": symbol, "end": end})
                 first_selected_node = None
                 transition_status.value = f"Переход {start} → {end} добавлен"
             draw_nodes()
@@ -225,9 +232,13 @@ def main(page: Page):
     def get_clicked_transition(x, y):
         threshold = 10  
         for start, trans_list in transitions.items():
+            if start not in nodes:
+                continue
             (x1, y1) = nodes[start]
             for t in trans_list:
                 end = t["end"]
+                if end not in nodes:
+                    continue
                 (x2, y2) = nodes[end]
 
                 dx, dy = x2 - x1, y2 - y1
@@ -238,7 +249,6 @@ def main(page: Page):
                 ux, uy = dx / length, dy / length
                 start_x, start_y = x1 + ux * 30, y1 + uy * 30
                 end_x, end_y = x2 - ux * 30, y2 - uy * 30
-
 
                 px, py = x, y
                 line_dist = abs((end_y - start_y) * px - (end_x - start_x) * py + end_x * start_y - end_y * start_x) / length
@@ -288,7 +298,6 @@ def main(page: Page):
         start, transition = get_clicked_transition(x, y)
         if transition:
             edit_transition_symbol(start, transition)
-
 
     def toggle_placing_mode(e):
         nonlocal placing_mode, transition_mode, first_selected_node
@@ -343,17 +352,99 @@ def main(page: Page):
         draw_nodes()
         page.update()
 
+    def add_alphabet_symbol(e):
+        symbol = alphabet_input.value.strip()
+        if symbol and len(symbol) == 1:
+            alphabet.add(symbol)
+            alphabet_display.value = f"Алфавит: {', '.join(sorted(alphabet))}"
+            alphabet_input.value = ""
+            status_text.value = f"Добавлен символ '{symbol}'"
+        else:
+            status_text.value = "Введите один символ!"
+        page.update()
+
+    def clear_automaton(e):
+        nonlocal nodes, node_counter, start_state, final_states, transitions
+        nonlocal selected_node, first_selected_node, placing_mode, transition_mode, alphabet
+        
+        nodes.clear()
+        node_counter = 0
+        start_state = None
+        final_states.clear()
+        transitions.clear()
+        selected_node = None
+        first_selected_node = None
+        placing_mode = False
+        transition_mode = False
+        alphabet.clear()
+        
+        drawing_area.shapes = []
+        mode_status.value = "Режим размещения: выключен"
+        transition_status.value = "Режим рисования переходов: выключен"
+        status_text.value = "Автомат очищен"
+        alphabet_display.value = "Алфавит: ∅"
+        alphabet_input.value = ""
+        page.update()
+
+    # Создание NFA для проверки слов
+    def build_nfa():
+        if not nodes or start_state is None:
+            return None
+
+        # Простая реализация проверки слова
+        # В реальном приложении здесь можно использовать automata-lib
+        def accepts_input(word):
+            current_states = {start_state}
+            
+            for symbol in word:
+                next_states = set()
+                for state in current_states:
+                    if state in transitions:
+                        for trans in transitions[state]:
+                            if trans["symbol"] == symbol:
+                                next_states.add(trans["end"])
+                current_states = next_states
+                if not current_states:
+                    return False
+            
+            return bool(current_states & final_states)
+        
+        return accepts_input
+
+    def handle_run(e):
+        if start_state is None:
+            status_text.value = "Не выбрано начальное состояние!"
+            page.update()
+            return
+        
+        nfa = build_nfa()
+        if nfa is None:
+            status_text.value = "Автомат неполный — добавьте состояния!"
+            page.update()
+            return
+        
+        word = word_input.value.strip()
+        if not word:
+            status_text.value = "Введите слово!"
+        else:
+            accepted = nfa(word)
+            status_text.value = f"Слово '{word}' {'✅ принимается' if accepted else '❌ не принимается'} автоматом"
+        page.update()
+
+    # Кнопки
+    place_mode_button = ElevatedButton("Режим добавления состояний", on_click=toggle_placing_mode)
+    transition_mode_button = ElevatedButton("Режим добавления переходов", on_click=toggle_transition_mode)
+    start_button = ElevatedButton("Переключить начальное состояние", on_click=toggle_start_state)
+    final_button = ElevatedButton("Переключить конечное состояние", on_click=toggle_final_state)
+    run_button = ElevatedButton("Обработать слово", on_click=handle_run)
+    add_alphabet_button = ElevatedButton("Добавить символ", on_click=add_alphabet_symbol)
+    clear_button = ElevatedButton("Очистить автомат", on_click=clear_automaton)
+
     gesture_area = GestureDetector(
         content=drawing_area,
         on_tap_down=handle_canvas_click,
         on_double_tap_down=handle_double_click
     )
-
-    place_mode_button = ElevatedButton("Переключить режим рисования состояний", on_click=toggle_placing_mode)
-    transition_mode_button = ElevatedButton("Переключить режим рисования переходов", on_click=toggle_transition_mode)
-    start_button = ElevatedButton("Переключить начальное состояние", on_click=toggle_start_state, width=500)
-    final_button = ElevatedButton("Переключить конечное состояние", on_click=toggle_final_state, width=500)
-    run_button = ElevatedButton("Обработать слово")
 
     graph_area = Container(
         bgcolor=Colors.WHITE,
@@ -370,7 +461,7 @@ def main(page: Page):
                 Container(
                     content=Column(
                         [
-                            Text("Система обработки ДКА / НКА", size=24, weight="bold"),
+                            Text("Визуальный автомат (NFA)", size=24, weight="bold"),
                             graph_area,
                             Column([mode_status, transition_status, status_text], spacing=5),
                             Row([word_input, run_button], spacing=20),
@@ -380,26 +471,33 @@ def main(page: Page):
                     padding=20,
                 ),
                 Container(
-                    padding=60,
-                    width=500,
+                    padding=20,
+                    width=350,
                     content=Column(
                         [
                             Card(
                                 content=Container(
                                     content=Column(
-                                        [
-                                            Text("Режимы", size=18, weight="bold"),
-                                            place_mode_button,
-                                            transition_mode_button,
-                                        ],
+                                        [Text("Режимы", size=18, weight="bold"), place_mode_button, transition_mode_button],
                                         spacing=10,
                                     ),
-                                    padding=20,
-                                    width=500,
+                                    padding=10,
+                                )
+                            ),
+                            Card(
+                                content=Container(
+                                    content=Column(
+                                        [Text("Алфавит", size=18, weight="bold"),
+                                         Row([alphabet_input, add_alphabet_button], spacing=10),
+                                         alphabet_display],
+                                        spacing=10,
+                                    ),
+                                    padding=10,
                                 )
                             ),
                             start_button,
                             final_button,
+                            clear_button,
                         ],
                         spacing=20,
                         alignment=MainAxisAlignment.START,
@@ -408,8 +506,6 @@ def main(page: Page):
                 ),
             ],
             spacing=5,
-            alignment=MainAxisAlignment.START,
-            vertical_alignment=CrossAxisAlignment.START,
         )
     )
 
