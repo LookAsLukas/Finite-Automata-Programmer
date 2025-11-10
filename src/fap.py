@@ -51,6 +51,10 @@ def main(page: Page):
     status_text = Text("Добавьте состояния или переходы", size=16, color=Colors.GREY_800)
     alphabet_display = Text("Алфавит: ∅", size=16, color=Colors.BLUE_800)
 
+        draw_nodes()
+        page.update()
+
+    # ---------- Графика ----------
     def draw_nodes():
         elements = []
         for name, (x, y) in nodes.items():
@@ -103,37 +107,37 @@ def main(page: Page):
                 start_x, start_y = x1 + ux * 30, y1 + uy * 30
                 end_x, end_y = x2 - ux * 30, y2 - uy * 30
 
-                arrow_line = canvas.Line(
+                elements.append(canvas.Line(
                     x1=start_x, y1=start_y, x2=end_x, y2=end_y,
                     paint=flet.Paint(Colors.BLACK, stroke_width=2)
-                )
+                ))
 
                 arrow_size = 10
                 perp_x, perp_y = -uy, ux
-                wing1 = canvas.Line(
+                elements.append(canvas.Line(
                     x1=end_x, y1=end_y,
                     x2=end_x - ux * arrow_size + perp_x * arrow_size,
                     y2=end_y - uy * arrow_size + perp_y * arrow_size,
                     paint=flet.Paint(Colors.BLACK, stroke_width=2)
-                )
-                wing2 = canvas.Line(
+                ))
+                elements.append(canvas.Line(
                     x1=end_x, y1=end_y,
                     x2=end_x - ux * arrow_size - perp_x * arrow_size,
                     y2=end_y - uy * arrow_size - perp_y * arrow_size,
                     paint=flet.Paint(Colors.BLACK, stroke_width=2)
-                )
+                ))
 
-                offset = 20 * (trans_list.index(t) + 1)
                 label = canvas.Text(
-                    x=(start_x + end_x) / 2 + offset,
-                    y=(start_y + end_y) / 2 - 10,
+                    x=(x1 + x2) / 2 + 10,
+                    y=(y1 + y2) / 2 - 10,
                     text=symbol,
                     style=TextStyle(size=18, weight=FontWeight.BOLD)
                 )
-                elements.extend([arrow_line, wing1, wing2, label])
+                elements.append(label)
 
-        drawing_area.shapes.extend(elements)
+        return elements
 
+    # ---------- Обработчики ----------
     def add_node(e):
         nonlocal node_counter
         if not placing_mode:
@@ -302,6 +306,7 @@ def main(page: Page):
         if transition:
             edit_transition_symbol(start, transition)
 
+    # ---------- Переключатели режимов ----------
     def toggle_placing_mode(e):
         nonlocal placing_mode, transition_mode, first_selected_node
         placing_mode = not placing_mode
@@ -309,7 +314,6 @@ def main(page: Page):
             transition_mode = False
             first_selected_node = None
         mode_status.value = "Режим размещения: ВКЛЮЧЕН" if placing_mode else "Режим размещения: выключен"
-        transition_status.value = "Режим рисования переходов: выключен"
         page.update()
 
     def toggle_transition_mode(e):
@@ -318,16 +322,16 @@ def main(page: Page):
         if transition_mode:
             placing_mode = False
             first_selected_node = None
-        transition_status.value = "Режим рисования переходов: ВКЛЮЧЕН" if transition_mode else "Режим рисования переходов: выключен"
-        mode_status.value = "Режим размещения: выключен"
+        transition_status.value = "Режим переходов: ВКЛЮЧЕН" if transition_mode else "Режим переходов: выключен"
         page.update()
 
+    # ---------- Управление состояниями ----------
     def toggle_start_state(e):
         nonlocal start_state
         if transition_mode or placing_mode:
             return
         if selected_node is None:
-            status_text.value = "Сначала выберите узел!"
+            status_text.value = "Выберите узел!"
             page.update()
             return
         if start_state == selected_node:
@@ -343,7 +347,7 @@ def main(page: Page):
         if transition_mode or placing_mode:
             return
         if selected_node is None:
-            status_text.value = "Сначала выберите узел!"
+            status_text.value = "Выберите узел!"
             page.update()
             return
         if selected_node in final_states:
@@ -543,6 +547,7 @@ def main(page: Page):
         on_double_tap_down=handle_double_click
     )
 
+    # ---------- Компоновка ----------
     graph_area = Container(
         bgcolor=Colors.WHITE,
         width=700,
