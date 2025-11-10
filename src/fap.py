@@ -51,9 +51,6 @@ def main(page: Page):
     status_text = Text("Добавьте состояния или переходы", size=16, color=Colors.GREY_800)
     alphabet_display = Text("Алфавит: ∅", size=16, color=Colors.BLUE_800)
 
-    draw_nodes()
-    page.update()
-
     # ---------- Графика ----------
     def draw_nodes():
         elements = []
@@ -82,8 +79,8 @@ def main(page: Page):
             )
             elements.append(text)
 
-        drawing_area.shapes = elements
-        draw_transitions()
+        transition_elements = draw_transitions()
+        drawing_area.shapes = elements + transition_elements
         drawing_area.update()
 
     def draw_transitions():
@@ -611,6 +608,8 @@ def main(page: Page):
         )
     )
 
+    draw_nodes()
+    page.update()
 
 if __name__ == "__main__":
     flet.app(target=main)
