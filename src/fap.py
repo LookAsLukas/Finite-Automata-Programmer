@@ -19,6 +19,9 @@ from flet import (
     FontWeight,
     AlertDialog
 )
+from automata.fa.nfa import NFA
+from automata_io import save_automaton_to_json, load_automaton_from_json
+from automata_visualizer import prepare_automaton_layout
 
 
 def main(page: Page):
@@ -386,38 +389,43 @@ def main(page: Page):
         alphabet_input.value = ""
         page.update()
 
-    # Создание NFA для проверки слов
-    def build_nfa():
+    # ---------- Функции из fapold.py ----------
+    def build_nfa_from_ui():
+        """Создает объект NFA из automata-lib на основе текущего автомата"""
         if not nodes or start_state is None:
             return None
 
-        # Простая реализация проверки слова
-        # В реальном приложении здесь можно использовать automata-lib
-        def accepts_input(word):
-            current_states = {start_state}
-            
-            for symbol in word:
-                next_states = set()
-                for state in current_states:
-                    if state in transitions:
-                        for trans in transitions[state]:
-                            if trans["symbol"] == symbol:
-                                next_states.add(trans["end"])
-                current_states = next_states
-                if not current_states:
-                    return False
-            
-            return bool(current_states & final_states)
-        
-        return accepts_input
+        states = set(nodes.keys())
+        initial_state = start_state
+        final_state_names = final_states
+
+        nfa_transitions = {}
+        for start_name, trans_list in transitions.items():
+            nfa_transitions[start_name] = {}
+            for t in trans_list:
+                symbol = t["symbol"]
+                end_name = t["end"]
+                nfa_transitions[start_name].setdefault(symbol, set()).add(end_name)
+
+        for name in states:
+            nfa_transitions.setdefault(name, {})
+
+        return NFA(
+            states=states,
+            input_symbols=set(alphabet),
+            transitions=nfa_transitions,
+            initial_state=initial_state,
+            final_states=final_state_names,
+        )
 
     def handle_run(e):
+        """Обработка слова с использованием automata-lib"""
         if start_state is None:
             status_text.value = "Не выбрано начальное состояние!"
             page.update()
             return
         
-        nfa = build_nfa()
+        nfa = build_nfa_from_ui()
         if nfa is None:
             status_text.value = "Автомат неполный — добавьте состояния!"
             page.update()
@@ -427,9 +435,96 @@ def main(page: Page):
         if not word:
             status_text.value = "Введите слово!"
         else:
-            accepted = nfa(word)
-            status_text.value = f"Слово '{word}' {'✅ принимается' if accepted else '❌ не принимается'} автоматом"
+            try:
+                accepted = nfa.accepts_input(word)
+                status_text.value = f"Слово '{word}' {'✅ принимается' if accepted else '❌ не принимается'} автоматом"
+            except Exception as ex:
+                status_text.value = f"Ошибка при обработке слова: {ex}"
         page.update()
+
+    def export_nfa(e):
+        """Экспорт автомата в JSON файл"""
+        if not nodes:
+            status_text.value = "Автомат пуст — нечего экспортировать!"
+            page.update()
+            return
+
+        if not final_states:
+            status_text.value = "Добавьте хотя бы одно конечное состояние!"
+            page.update()
+            return
+
+        if not alphabet:
+            status_text.value = "Алфавит пуст — добавьте символы!"
+            page.update()
+            return
+
+        if start_state is None:
+            status_text.value = "Не выбрано начальное состояние!"
+            page.update()
+            return
+
+        try:
+            nfa = build_nfa_from_ui()
+            if nfa is None:
+                status_text.value = "Автомат неполный — экспорт невозможен!"
+                page.update()
+                return
+            export_path = "nfa.json"
+            save_automaton_to_json(nfa, export_path)
+            status_text.value = f"✅ NFA экспортирован в файл {export_path}"
+        except (TypeError, IOError) as err:
+            status_text.value = f"Ошибка экспорта: {err}"
+        page.update()
+
+    def import_automaton(e):
+        """Импорт автомата из JSON файла"""
+        nonlocal nodes, transitions, final_states, start_state, alphabet, node_counter
+        nonlocal placing_mode, transition_mode, selected_node, first_selected_node
+        
+        automaton = load_automaton_from_json("nfa.json")
+        if automaton is None:
+            status_text.value = "Не удалось загрузить автомат из nfa.json"
+            page.update()
+            return
+
+        try:
+            layout = prepare_automaton_layout(automaton, canvas_width=700, canvas_height=450)
+            layout_nodes, layout_state_names, layout_transitions, layout_final_states, layout_start_index, layout_alphabet = layout
+
+            # Конвертируем формат данных из automata_visualizer в наш формат
+            nodes = {}
+            for i, (x, y) in enumerate(layout_nodes):
+                nodes[layout_state_names[i]] = (x, y)
+            
+            transitions = {}
+            for start_idx, trans_list in layout_transitions.items():
+                start_name = layout_state_names[start_idx]
+                transitions[start_name] = []
+                for t in trans_list:
+                    end_name = layout_state_names[t["end"]]
+                    transitions[start_name].append({"symbol": t["symbol"], "end": end_name})
+            
+            final_states = {layout_state_names[i] for i in layout_final_states}
+            start_state = layout_state_names[layout_start_index] if layout_start_index is not None else None
+            alphabet = set(layout_alphabet)
+            node_counter = len(layout_state_names)
+            placing_mode = False
+            transition_mode = False
+            selected_node = None
+            first_selected_node = None
+
+            alphabet_display.value = f"Алфавит: {', '.join(sorted(alphabet))}" if alphabet else "Алфавит: ∅"
+            mode_status.value = "Режим размещения: выключен"
+            transition_status.value = "Режим переходов: выключен"
+            status_text.value = "✅ Автомат импортирован из nfa.json"
+
+            draw_nodes()
+            page.update()
+            
+        except Exception as ex:
+            status_text.value = f"Ошибка при импорте автомата: {ex}"
+            page.update()
 
     # Кнопки
     place_mode_button = ElevatedButton("Режим добавления состояний", on_click=toggle_placing_mode)
@@ -437,6 +532,8 @@ def main(page: Page):
     start_button = ElevatedButton("Переключить начальное состояние", on_click=toggle_start_state)
     final_button = ElevatedButton("Переключить конечное состояние", on_click=toggle_final_state)
     run_button = ElevatedButton("Обработать слово", on_click=handle_run)
+    export_button = ElevatedButton("Экспортировать NFA", on_click=export_nfa)
+    import_button = ElevatedButton("Импортировать автомат", on_click=import_automaton)
     add_alphabet_button = ElevatedButton("Добавить символ", on_click=add_alphabet_symbol)
     clear_button = ElevatedButton("Очистить автомат", on_click=clear_automaton)
 
@@ -464,7 +561,7 @@ def main(page: Page):
                             Text("Визуальный автомат (NFA)", size=24, weight="bold"),
                             graph_area,
                             Column([mode_status, transition_status, status_text], spacing=5),
-                            Row([word_input, run_button], spacing=20),
+                            Row([word_input, run_button, export_button, import_button], spacing=10),
                         ],
                         spacing=15,
                     ),
