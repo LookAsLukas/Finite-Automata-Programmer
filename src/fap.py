@@ -51,8 +51,8 @@ def main(page: Page):
     status_text = Text("Добавьте состояния или переходы", size=16, color=Colors.GREY_800)
     alphabet_display = Text("Алфавит: ∅", size=16, color=Colors.BLUE_800)
 
-        draw_nodes()
-        page.update()
+    draw_nodes()
+    page.update()
 
     # ---------- Графика ----------
     def draw_nodes():
