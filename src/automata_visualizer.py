@@ -76,4 +76,3 @@ def prepare_automaton_layout(
     alphabet = set(getattr(automaton, "input_symbols", set()))
 
     return nodes, states, transitions, final_state_indices, start_state_index, alphabet
-
