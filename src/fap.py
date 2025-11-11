@@ -1,4 +1,3 @@
-import math
 import flet
 from flet import (
     Page,
@@ -22,6 +21,12 @@ from flet import (
 from automata.fa.nfa import NFA
 from automata_io import save_automaton_to_json, load_automaton_from_json
 from automata_visualizer import prepare_automaton_layout
+from edge_geometry import (
+    GeometrySettings,
+    compute_transition_geometry,
+    iter_transition_metadata,
+    point_to_polyline_distance,
+)
 
 
 def main(page: Page):
@@ -29,6 +34,23 @@ def main(page: Page):
     page.window_width = 900
     page.window_height = 600
     page.bgcolor = Colors.BLUE_GREY_50
+
+    # Настройки визуализации
+    NODE_RADIUS = 30
+    ARROW_SIZE = 10
+    BIDIRECTIONAL_OFFSET = 40
+    MULTI_EDGE_GAP = 18
+    COLLISION_PADDING = 28
+    EDGE_PADDING = 8
+    HIT_THRESHOLD = 12
+
+    geometry_settings = GeometrySettings(
+        node_radius=NODE_RADIUS,
+        bidirectional_offset=BIDIRECTIONAL_OFFSET,
+        multi_edge_gap=MULTI_EDGE_GAP,
+        collision_padding=COLLISION_PADDING,
+        edge_padding=EDGE_PADDING,
+    )
 
     # nodes: {state_name: (x, y)}
     nodes = {}
@@ -62,12 +84,12 @@ def main(page: Page):
             else:
                 color = Colors.AMBER_100
 
-            circle = canvas.Circle(x=x, y=y, radius=30, paint=flet.Paint(color))
+            circle = canvas.Circle(x=x, y=y, radius=NODE_RADIUS, paint=flet.Paint(color))
             elements.append(circle)
 
             if selected_node == name:
                 outline = canvas.Circle(
-                    x=x, y=y, radius=30,
+                    x=x, y=y, radius=NODE_RADIUS,
                     paint=flet.Paint(Colors.BLUE_800, style="stroke", stroke_width=3)
                 )
                 elements.append(outline)
@@ -85,52 +107,49 @@ def main(page: Page):
 
     def draw_transitions():
         elements = []
-        for start, trans_list in transitions.items():
-            if start not in nodes:
+        for start, transition, meta in iter_transition_metadata(transitions):
+            geometry = compute_transition_geometry(
+                nodes, start, transition["end"], meta, geometry_settings
+            )
+            if geometry is None:
                 continue
-            (x1, y1) = nodes[start]
 
-            for t in trans_list:
-                symbol = t["symbol"]
-                end = t["end"]
-                if end not in nodes:
-                    continue
-                (x2, y2) = nodes[end]
-                dx, dy = x2 - x1, y2 - y1
-                length = math.sqrt(dx ** 2 + dy ** 2)
-                if length == 0:
-                    continue
-                ux, uy = dx / length, dy / length
-                start_x, start_y = x1 + ux * 30, y1 + uy * 30
-                end_x, end_y = x2 - ux * 30, y2 - uy * 30
-
+            points = geometry["points"]
+            for idx in range(len(points) - 1):
+                x1, y1 = points[idx]
+                x2, y2 = points[idx + 1]
                 elements.append(canvas.Line(
-                    x1=start_x, y1=start_y, x2=end_x, y2=end_y,
+                    x1=x1,
+                    y1=y1,
+                    x2=x2,
+                    y2=y2,
                     paint=flet.Paint(Colors.BLACK, stroke_width=2)
                 ))
 
-                arrow_size = 10
-                perp_x, perp_y = -uy, ux
-                elements.append(canvas.Line(
-                    x1=end_x, y1=end_y,
-                    x2=end_x - ux * arrow_size + perp_x * arrow_size,
-                    y2=end_y - uy * arrow_size + perp_y * arrow_size,
-                    paint=flet.Paint(Colors.BLACK, stroke_width=2)
-                ))
-                elements.append(canvas.Line(
-                    x1=end_x, y1=end_y,
-                    x2=end_x - ux * arrow_size - perp_x * arrow_size,
-                    y2=end_y - uy * arrow_size - perp_y * arrow_size,
-                    paint=flet.Paint(Colors.BLACK, stroke_width=2)
-                ))
+            ex, ey = geometry["end"]
+            arrow_ux, arrow_uy = geometry["arrow_dir"]
+            arrow_perp_x, arrow_perp_y = -arrow_uy, arrow_ux
+            elements.append(canvas.Line(
+                x1=ex, y1=ey,
+                x2=ex - arrow_ux * ARROW_SIZE + arrow_perp_x * ARROW_SIZE,
+                y2=ey - arrow_uy * ARROW_SIZE + arrow_perp_y * ARROW_SIZE,
+                paint=flet.Paint(Colors.BLACK, stroke_width=2)
+            ))
+            elements.append(canvas.Line(
+                x1=ex, y1=ey,
+                x2=ex - arrow_ux * ARROW_SIZE - arrow_perp_x * ARROW_SIZE,
+                y2=ey - arrow_uy * ARROW_SIZE - arrow_perp_y * ARROW_SIZE,
+                paint=flet.Paint(Colors.BLACK, stroke_width=2)
+            ))
 
-                label = canvas.Text(
-                    x=(x1 + x2) / 2 + 10,
-                    y=(y1 + y2) / 2 - 10,
-                    text=symbol,
-                    style=TextStyle(size=18, weight=FontWeight.BOLD)
-                )
-                elements.append(label)
+            label_x, label_y = geometry["label"]
+            label = canvas.Text(
+                x=label_x,
+                y=label_y,
+                text=transition["symbol"],
+                style=TextStyle(size=18, weight=FontWeight.BOLD)
+            )
+            elements.append(label)
 
         return elements
 
@@ -147,7 +166,7 @@ def main(page: Page):
 
     def get_clicked_node(x, y):
         for name, (nx, ny) in nodes.items():
-            if (x - nx) ** 2 + (y - ny) ** 2 <= 30 ** 2:
+            if (x - nx) ** 2 + (y - ny) ** 2 <= NODE_RADIUS ** 2:
                 return name
         return None
 
@@ -234,32 +253,14 @@ def main(page: Page):
                 page.update()
 
     def get_clicked_transition(x, y):
-        threshold = 10  
-        for start, trans_list in transitions.items():
-            if start not in nodes:
+        for start, transition, meta in iter_transition_metadata(transitions):
+            geometry = compute_transition_geometry(
+                nodes, start, transition["end"], meta, geometry_settings
+            )
+            if geometry is None:
                 continue
-            (x1, y1) = nodes[start]
-            for t in trans_list:
-                end = t["end"]
-                if end not in nodes:
-                    continue
-                (x2, y2) = nodes[end]
-
-                dx, dy = x2 - x1, y2 - y1
-                length = math.sqrt(dx ** 2 + dy ** 2)
-                if length == 0:
-                    continue
-
-                ux, uy = dx / length, dy / length
-                start_x, start_y = x1 + ux * 30, y1 + uy * 30
-                end_x, end_y = x2 - ux * 30, y2 - uy * 30
-
-                px, py = x, y
-                line_dist = abs((end_y - start_y) * px - (end_x - start_x) * py + end_x * start_y - end_y * start_x) / length
-                if line_dist <= threshold:
-                    dot = ((px - start_x) * (end_x - start_x) + (py - start_y) * (end_y - start_y)) / (length ** 2)
-                    if 0 <= dot <= 1:
-                        return start, t
+            if point_to_polyline_distance(x, y, geometry["points"]) <= HIT_THRESHOLD:
+                return start, transition
         return None, None
 
     def edit_transition_symbol(start, transition):
