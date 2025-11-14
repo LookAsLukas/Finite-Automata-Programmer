@@ -1,7 +1,5 @@
 from automata.fa.nfa import NFA
-from automata_io import save_automaton_to_json, load_automaton_from_json
 from automata_visualizer import prepare_automaton_layout
-from draw import draw_nodes
 
 
 def build_nfa_from_ui(attr):
