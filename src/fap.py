@@ -15,6 +15,7 @@ from flet import (
 )
 from draw import draw_nodes
 from application_state import ApplicationUI, ApplicationAttributes
+from canvas_events import handle_drag_start, handle_drag_update, handle_drag_end
 from canvas_events import handle_canvas_click, handle_double_click
 from edit_events import (
     toggle_final_state,
@@ -48,9 +49,12 @@ def main(page: Page):
     clear_button = ElevatedButton("Очистить автомат", on_click=lambda e: clear_automaton(e, attr, ui, page))
 
     gesture_area = GestureDetector(
-        content=ui.drawing_area,
-        on_tap_down=lambda e: handle_canvas_click(e, attr, ui, page),
-        on_double_tap_down=lambda e: handle_double_click(e, attr, ui, page)
+    content=ui.drawing_area,
+    on_tap_down=lambda e: handle_canvas_click(e, attr, ui, page),
+    on_double_tap_down=lambda e: handle_double_click(e, attr, ui, page),
+    on_pan_start=lambda e: handle_drag_start(e, attr, ui, page),
+    on_pan_update=lambda e: handle_drag_update(e, attr, ui, page),
+    on_pan_end=lambda e: handle_drag_end(e, attr, ui, page)
     )
 
     # ---------- Компоновка ----------
