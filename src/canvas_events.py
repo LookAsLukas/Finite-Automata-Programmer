@@ -62,3 +62,34 @@ def handle_double_click(e, attr, ui, page):
     if transition:
         dialog = edit_transition_dialog(start, transition, attr, ui, page)
         page.open(dialog)
+
+
+def handle_drag_start(e, attr, ui, page):
+    """Начало перетаскивания узла"""
+    if attr.placing_mode or attr.transition_mode:
+        return
+    
+    x, y = e.local_x, e.local_y
+    clicked_node = get_clicked_node(x, y, attr.nodes)
+    
+    if clicked_node:
+        attr.dragging_node = clicked_node
+        attr.selected_node = clicked_node
+        ui.status_text.value = f"Перетаскивание состояния {clicked_node}"
+        draw_nodes(attr, ui)
+        page.update()
+
+def handle_drag_update(e, attr, ui, page):
+    """Обновление позиции перетаскиваемого узла"""
+    if attr.dragging_node:
+        x, y = e.local_x, e.local_y
+        attr.nodes[attr.dragging_node] = (x, y)
+        draw_nodes(attr, ui)
+        page.update()
+
+def handle_drag_end(e, attr, ui, page):
+    """Завершение перетаскивания"""
+    if attr.dragging_node:
+        ui.status_text.value = f"Состояние {attr.dragging_node} перемещено"
+        attr.dragging_node = None
+        page.update()
