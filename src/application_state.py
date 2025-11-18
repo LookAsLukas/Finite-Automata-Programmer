@@ -28,4 +28,5 @@ class ApplicationUI:
     transition_status = Text("Режим переходов: выключен", size=16, color=Colors.GREY_800)
     status_text = Text("Добавьте состояния или переходы", size=16, color=Colors.GREY_800)
     alphabet_display = Text("Алфавит: ∅", size=16, color=Colors.BLUE_800)
-
+    open_file_picker = None
+    save_file_picker = None

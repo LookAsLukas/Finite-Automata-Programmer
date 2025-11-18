@@ -1,5 +1,5 @@
 from automata_operations import build_nfa_from_ui, import_automaton_data
-from automata_io import load_automaton_from_json
+from automata_io import load_automaton_from_json, save_automaton_to_json
 from draw import draw_nodes
 
 
@@ -28,25 +28,24 @@ def handle_run(e, attr, ui, page):
     page.update()
 
 
-def export_nfa(e, attr, ui, page):
-    """Экспорт автомата в JSON файл"""
+def _validate_automaton_before_export(attr):
+    """Проверяет, что автомат заполнен перед экспортом."""
     if not attr.nodes:
-        ui.status_text.value = "Автомат пуст — нечего экспортировать!"
-        page.update()
-        return
-
+        return "Автомат пуст — нечего экспортировать!"
     if not attr.final_states:
-        ui.status_text.value = "Добавьте хотя бы одно конечное состояние!"
-        page.update()
-        return
-
+        return "Добавьте хотя бы одно конечное состояние!"
     if not attr.alphabet:
-        ui.status_text.value = "Алфавит пуст — добавьте символы!"
-        page.update()
-        return
-
+        return "Алфавит пуст — добавьте символы!"
     if attr.start_state is None:
-        ui.status_text.value = "Не выбрано начальное состояние!"
+        return "Не выбрано начальное состояние!"
+    return None
+
+
+def export_nfa_to_path(export_path, attr, ui, page):
+    """Экспорт автомата в JSON файл по указанному пути."""
+    error_message = _validate_automaton_before_export(attr)
+    if error_message:
+        ui.status_text.value = error_message
         page.update()
         return
 
@@ -56,8 +55,6 @@ def export_nfa(e, attr, ui, page):
             ui.status_text.value = "Автомат неполный — экспорт невозможен!"
             page.update()
             return
-        export_path = "nfa.json"
-        from automata_io import save_automaton_to_json
         save_automaton_to_json(nfa, export_path)
         ui.status_text.value = f"✅ NFA экспортирован в файл {export_path}"
     except Exception as err:
@@ -65,14 +62,59 @@ def export_nfa(e, attr, ui, page):
     page.update()
 
 
-def import_automaton(e, attr, ui, page):
-    """Импорт автомата из JSON файла"""
-    automaton = load_automaton_from_json("nfa.json")
+def import_automaton_from_path(file_path, attr, ui, page):
+    """Импорт автомата из JSON файла по указанному пути."""
+    automaton = load_automaton_from_json(file_path)
     if automaton is None:
-        ui.status_text.value = "Не удалось загрузить автомат из nfa.json"
+        ui.status_text.value = f"Не удалось загрузить автомат из {file_path}"
         page.update()
         return
 
     if import_automaton_data(automaton, attr, ui):
         draw_nodes(attr, ui)
         page.update()
+
+
+def request_file_open(e, attr, ui, page):
+    """Открывает диалог выбора файла для импорта автомата."""
+    if ui.open_file_picker:
+        ui.open_file_picker.pick_files(allow_multiple=False, allowed_extensions=["json"])
+    else:
+        ui.status_text.value = "Диалог выбора файла недоступен"
+        page.update()
+
+
+def handle_open_file_result(e, attr, ui, page):
+    """Обрабатывает выбранный в диалоге файл импорта."""
+    if not e.files:
+        ui.status_text.value = "Выбор файла отменен"
+        page.update()
+        return
+
+    file_path = e.files[0].path
+    import_automaton_from_path(file_path, attr, ui, page)
+
+
+def request_file_save(e, attr, ui, page):
+    """Открывает диалог сохранения автомата в файл."""
+    error_message = _validate_automaton_before_export(attr)
+    if error_message:
+        ui.status_text.value = error_message
+        page.update()
+        return
+
+    if ui.save_file_picker:
+        ui.save_file_picker.save_file(file_name="nfa.json", allowed_extensions=["json"])
+    else:
+        ui.status_text.value = "Диалог сохранения недоступен"
+        page.update()
+
+
+def handle_save_file_result(e, attr, ui, page):
+    """Обрабатывает выбранный путь для сохранения автомата."""
+    if not e.path:
+        ui.status_text.value = "Сохранение отменено"
+        page.update()
+        return
+
+    export_nfa_to_path(e.path, attr, ui, page)

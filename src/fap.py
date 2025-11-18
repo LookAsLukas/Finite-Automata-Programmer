@@ -2,6 +2,7 @@ import flet
 from flet import (
     Page,
     Text,
+    AppBar,
     ElevatedButton,
     Column,
     Row,
@@ -12,6 +13,9 @@ from flet import (
     Card,
     MainAxisAlignment,
     GestureDetector,
+    PopupMenuButton,
+    PopupMenuItem,
+    FilePicker,
 )
 from draw import draw_nodes
 from application_state import ApplicationUI, ApplicationAttributes
@@ -25,17 +29,44 @@ from edit_events import (
     add_alphabet_symbol,
     clear_automaton
 )
-from interaction_events import handle_run, export_nfa, import_automaton
+from interaction_events import (
+    handle_run,
+    request_file_open,
+    request_file_save,
+    handle_open_file_result,
+    handle_save_file_result,
+)
 
 
 def main(page: Page):
     page.title = "FAP — Визуальный конструктор НКА"
     page.window_width = 900
     page.window_height = 600
+    page.padding = 0
     page.bgcolor = Colors.BLUE_GREY_50
 
     attr = ApplicationAttributes()
     ui = ApplicationUI()
+
+    # Диалоги выбора файла для импорта/экспорта
+    ui.open_file_picker = FilePicker(on_result=lambda e: handle_open_file_result(e, attr, ui, page))
+    ui.save_file_picker = FilePicker(on_result=lambda e: handle_save_file_result(e, attr, ui, page))
+    page.overlay.append(ui.open_file_picker)
+    page.overlay.append(ui.save_file_picker)
+
+    page.appbar = AppBar(
+        bgcolor=Colors.BLUE_GREY_900,
+        toolbar_height=48,
+        title=PopupMenuButton(
+            content=Text("Файл", color=Colors.WHITE, weight="bold"),
+            items=[
+                PopupMenuItem(text="Открыть файл", on_click=lambda e: request_file_open(e, attr, ui, page)),
+                PopupMenuItem(text="Сохранить файл", on_click=lambda e: request_file_save(e, attr, ui, page)),
+            ],
+        ),
+        center_title=False,
+        actions=[],
+    )
 
     # Кнопки
     place_mode_button = ElevatedButton("Режим добавления состояний", on_click=lambda e: toggle_placing_mode(e, attr, ui, page))
@@ -43,8 +74,6 @@ def main(page: Page):
     start_button = ElevatedButton("Переключить начальное состояние", on_click=lambda e: toggle_start_state(e, attr, ui, page))
     final_button = ElevatedButton("Переключить конечное состояние", on_click=lambda e: toggle_final_state(e, attr, ui, page))
     run_button = ElevatedButton("Обработать слово", on_click=lambda e: handle_run(e, attr, ui, page))
-    export_button = ElevatedButton("Экспортировать NFA", on_click=lambda e: export_nfa(e, attr, ui, page))
-    import_button = ElevatedButton("Импортировать автомат", on_click=lambda e: import_automaton(e, attr, ui, page))
     add_alphabet_button = ElevatedButton("Добавить символ", on_click=lambda e: add_alphabet_symbol(e, attr, ui, page))
     clear_button = ElevatedButton("Очистить автомат", on_click=lambda e: clear_automaton(e, attr, ui, page))
 
@@ -68,56 +97,61 @@ def main(page: Page):
     )
 
     page.add(
-        Row(
+        Column(
             [
-                Container(
-                    content=Column(
-                        [
-                            Text("Визуальный автомат (NFA)", size=24, weight="bold"),
-                            graph_area,
-                            Column([ui.mode_status, ui.transition_status, ui.status_text], spacing=5),
-                            Row([ui.word_input, run_button, export_button, import_button], spacing=10),
-                        ],
-                        spacing=15,
-                    ),
-                    padding=20,
-                ),
-                Container(
-                    padding=20,
-                    width=350,
-                    content=Column(
-                        [
-                            Card(
-                                content=Container(
-                                    content=Column(
-                                        [Text("Режимы", size=18, weight="bold"), place_mode_button, transition_mode_button],
-                                        spacing=10,
-                                    ),
-                                    padding=10,
-                                )
+                Row(
+                    [
+                        Container(
+                            content=Column(
+                                [
+                                    Text("Визуальный автомат (NFA)", size=24, weight="bold"),
+                                    graph_area,
+                                    Column([ui.mode_status, ui.transition_status, ui.status_text], spacing=5),
+                                    Row([ui.word_input, run_button], spacing=10),
+                                ],
+                                spacing=15,
                             ),
-                            Card(
-                                content=Container(
-                                    content=Column(
-                                        [Text("Алфавит", size=18, weight="bold"),
-                                         Row([ui.alphabet_input, add_alphabet_button], spacing=10),
-                                         ui.alphabet_display],
-                                        spacing=10,
+                            padding=20,
+                        ),
+                        Container(
+                            padding=20,
+                            width=350,
+                            content=Column(
+                                [
+                                    Card(
+                                        content=Container(
+                                            content=Column(
+                                                [Text("Режимы", size=18, weight="bold"), place_mode_button, transition_mode_button],
+                                                spacing=10,
+                                            ),
+                                            padding=10,
+                                        )
                                     ),
-                                    padding=10,
-                                )
+                                    Card(
+                                        content=Container(
+                                            content=Column(
+                                                [Text("Алфавит", size=18, weight="bold"),
+                                                 Row([ui.alphabet_input, add_alphabet_button], spacing=10),
+                                                 ui.alphabet_display],
+                                                spacing=10,
+                                            ),
+                                            padding=10,
+                                        )
+                                    ),
+                                    start_button,
+                                    final_button,
+                                    clear_button,
+                                ],
+                                spacing=20,
+                                alignment=MainAxisAlignment.START,
+                                horizontal_alignment=CrossAxisAlignment.CENTER,
                             ),
-                            start_button,
-                            final_button,
-                            clear_button,
-                        ],
-                        spacing=20,
-                        alignment=MainAxisAlignment.START,
-                        horizontal_alignment=CrossAxisAlignment.CENTER,
-                    ),
+                        ),
+                    ],
+                    spacing=5,
                 ),
             ],
-            spacing=5,
+            spacing=10,
         )
     )
 
