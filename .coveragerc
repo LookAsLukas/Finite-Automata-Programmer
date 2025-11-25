@@ -1,0 +1,6 @@
+[run]
+omit =
+    src/fap.py
+    src/*_events.py
+    src/dialog_handlers.py
+    src/draw.py
