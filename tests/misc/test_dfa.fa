@@ -1,0 +1,30 @@
+{
+    "type": "DFA",
+    "states": [
+        "a",
+        "c",
+        "b"
+    ],
+    "input_symbols": [
+        "0",
+        "1"
+    ],
+    "transitions": {
+        "a": {
+            "0": "b",
+            "1": "c"
+        },
+        "b": {
+            "0": "b",
+            "1": "b"
+        },
+        "c": {
+            "0": "b",
+            "1": "a"
+        }
+    },
+    "initial_state": "a",
+    "final_states": [
+        "a"
+    ]
+}
