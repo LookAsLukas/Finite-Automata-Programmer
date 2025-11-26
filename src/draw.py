@@ -76,10 +76,11 @@ def draw_transitions(attr, ui):
                 paint=flet.Paint(Colors.BLACK, stroke_width=2)
             ))
 
+            label_symbol = "ε" if symbol == "" else symbol
             label = canvas.Text(
                 x=(x1 + x2) / 2 + 10,
                 y=(y1 + y2) / 2 - 10,
-                text=symbol,
+                text=label_symbol,
                 style=TextStyle(size=18, weight=FontWeight.BOLD)
             )
             elements.append(label)

@@ -1,7 +1,7 @@
 import json
 from automata.fa.dfa import DFA
 from automata.fa.nfa import NFA
-
+from automata.base.exceptions import MissingStateError  # Импорт для обработки ошибки
 
 def save_automaton_to_json(automaton, file_path):
     """
@@ -52,10 +52,8 @@ def save_automaton_to_json(automaton, file_path):
 def load_automaton_from_json(file_path):
     """
     Загружает конечный автомат (DFA или NFA) из файла JSON.
-    Args:
-        file_path (str): Путь к JSON-файлу.
-    Returns:
-        Объект DFA или NFA, либо None в случае ошибки.
+    Если возникает MissingStateError (начальное состояние без переходов),
+    добавляем фиктивный epsilon self-loop (с символом '') для прохождения валидации.
     """
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
@@ -84,14 +82,28 @@ def load_automaton_from_json(file_path):
                 }
                 for state, transition_map in transitions_from_json.items()
             }
-            return NFA(
-                states=states,
-                input_symbols=input_symbols,
-                transitions=transitions,
-                initial_state=initial_state,
-                final_states=final_states
-            )
+            try:
+                return NFA(
+                    states=states,
+                    input_symbols=input_symbols,
+                    transitions=transitions,
+                    initial_state=initial_state,
+                    final_states=final_states
+                )
+            except MissingStateError:
+                print(f"Автомат имел проблему с валидацией: initial state {initial_state} has no transitions defined. Добавляем фиктивный epsilon-переход для начального состояния.")
+                if initial_state not in transitions:
+                    transitions[initial_state] = {}
+                if not transitions[initial_state]:
+                    transitions[initial_state][''] = {initial_state}  # Фиктивный epsilon self-loop (используем '' вместо None)
+                return NFA(
+                    states=states,
+                    input_symbols=input_symbols,
+                    transitions=transitions,
+                    initial_state=initial_state,
+                    final_states=final_states
+                )
 
-    except (IOError, json.JSONDecodeError, KeyError, TypeError) as e:
+    except (IOError, json.JSONDecodeError, KeyError, TypeError, MissingStateError) as e:
         print(f"Ошибка при загрузке или парсинге файла: {e}")
         return None
