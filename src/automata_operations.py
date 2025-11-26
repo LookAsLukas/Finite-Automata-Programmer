@@ -43,7 +43,6 @@ def import_automaton_data(automaton, attr, ui):
         for i, (x, y) in enumerate(layout_nodes):
             attr.nodes[layout_state_names[i]] = (x, y)
         
-        # Ключевое исправление: теперь обрабатываем ВСЕ переходы, включая ε-переходы (symbol == '')
         attr.transitions = {}
         for start_idx, trans_list in layout_transitions.items():
             start_name = layout_state_names[start_idx]
@@ -51,7 +50,6 @@ def import_automaton_data(automaton, attr, ui):
             for t in trans_list:
                 end_name = layout_state_names[t["end"]]
                 symbol = t["symbol"]
-                # Превращаем пустую строку (ε-переход) в понятный вид "ε"
                 if symbol == "":
                     symbol = "ε"
                 attr.transitions[start_name].append({"symbol": symbol, "end": end_name})

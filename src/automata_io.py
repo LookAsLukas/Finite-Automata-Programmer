@@ -1,7 +1,7 @@
 import json
 from automata.fa.dfa import DFA
 from automata.fa.nfa import NFA
-from automata.base.exceptions import MissingStateError  # Импорт для обработки ошибки
+from automata.base.exceptions import MissingStateError 
 
 def save_automaton_to_json(automaton, file_path):
     """
@@ -18,9 +18,7 @@ def save_automaton_to_json(automaton, file_path):
 
     is_dfa = isinstance(automaton, DFA)
 
-    # Для NFA значения переходов (dest_states) являются множествами (set) и их нужно
-    # преобразовать в списки для сериализации в JSON.
-    # Для DFA значения уже являются строками и не требуют преобразования.
+
     transitions_for_json = automaton.transitions
     if not is_dfa:
         transitions_for_json = {
@@ -95,7 +93,7 @@ def load_automaton_from_json(file_path):
                 if initial_state not in transitions:
                     transitions[initial_state] = {}
                 if not transitions[initial_state]:
-                    transitions[initial_state][''] = {initial_state}  # Фиктивный epsilon self-loop (используем '' вместо None)
+                    transitions[initial_state][''] = {initial_state}
                 return NFA(
                     states=states,
                     input_symbols=input_symbols,
