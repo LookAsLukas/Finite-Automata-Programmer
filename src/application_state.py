@@ -16,6 +16,7 @@ class ApplicationAttributes:
     transition_mode = False
     alphabet = set()
     dragging_node = None  # имя перетаскиваемого узла
+    selected_transition = None
 
 
 @dataclass

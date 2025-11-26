@@ -84,3 +84,31 @@ def clear_automaton(e, attr, ui, page):
     ui.alphabet_display.value = "Алфавит: ∅"
     ui.alphabet_input.value = ""
     page.update()
+
+def handle_delete(e, attr, ui, page):
+    if attr.selected_node:
+        pass
+        #delete_state(attr.selected_node, attr, ui, page)
+    elif hasattr(attr, 'selected_transition') and attr.selected_transition:
+        delete_transition(attr.selected_transition, attr, ui, page)
+    else:
+        ui.status_text.value = "Ничего не выбрано для удаления"
+    
+    page.update()
+
+def delete_transition(transition_info, attr, ui, page):
+    start_name, transition = transition_info
+    
+    if start_name in attr.transitions and transition in attr.transitions[start_name]:
+        attr.transitions[start_name].remove(transition)
+
+        if not attr.transitions[start_name]:
+            del attr.transitions[start_name]
+        
+        ui.status_text.value = f"Переход {start_name} → {transition['end']} удалён"
+        
+        if hasattr(attr, 'selected_transition'):
+            attr.selected_transition = None
+        
+        from draw import draw_nodes
+        draw_nodes(attr, ui)
