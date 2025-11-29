@@ -1,5 +1,4 @@
-from flet import Text, TextField, ElevatedButton, AlertDialog
-
+from flet import Text, TextField, ElevatedButton, AlertDialog, Column, Colors
 
 def rename_state_dialog(name: str, attr, ui, page):
     """Создает диалог для переименования состояния."""
@@ -79,6 +78,72 @@ def edit_transition_dialog(start: str, transition: dict, attr, ui, page):
         content=input_field,
         actions=[
             ElevatedButton("OK", on_click=on_submit),
+            ElevatedButton("Отмена", on_click=lambda e: page.close(dialog)),
+        ],
+    )
+    return dialog
+
+def regex_input_dialog(attr, ui, page):
+    """Создает диалог для ввода регулярного выражения и построения КА"""
+    def on_submit(e):
+        regex_str = input_field.value.strip()
+        if not regex_str:
+            ui.status_text.value = "Регулярное выражение не может быть пустым!"
+            page.close(dialog)
+            page.update()
+            return
+        
+        try:
+            # Импортируем здесь чтобы избежать циклического импорта
+            from regex_to_fa import regex_to_nfa, validate_regex_syntax
+            
+            # Сначала проверяем синтаксис регулярного выражения
+            is_valid, error_msg = validate_regex_syntax(regex_str)
+            if not is_valid:
+                ui.status_text.value = f"Неверное регулярное выражение: {error_msg}"
+                page.close(dialog)
+                page.update()
+                return
+            
+            # Конвертируем регулярное выражение в НКА
+            nfa = regex_to_nfa(regex_str)
+            
+            # Импортируем сгенерированный НКА в UI
+            from automata_operations import import_automaton_data
+            if import_automaton_data(nfa, attr, ui):
+                # ДОБАВЛЕНО: сохраняем и отображаем регулярное выражение
+                attr.current_regex = regex_str
+                ui.regex_display.value = f"Регулярное выражение: {regex_str}"
+                ui.status_text.value = f"✅ КА построен из регулярного выражения: {regex_str}"
+                from draw import draw_nodes
+                draw_nodes(attr, ui)
+            else:
+                ui.status_text.value = f"❌ Не удалось построить КА из регулярного выражения: {regex_str}"
+                
+        except Exception as ex:
+            ui.status_text.value = f"❌ Ошибка при построении КА: {str(ex)}"
+        
+        page.close(dialog)
+        page.update()
+
+    input_field = TextField(
+        label="Регулярное выражение", 
+        hint_text="например: (a|b)*abb, a*b*c*, и т.д.",
+        autofocus=True,
+        width=400
+    )
+    
+    dialog = AlertDialog(
+        modal=True,
+        title=Text("Построение КА из регулярного выражения"),
+        content=Column([
+            Text("Введите регулярное выражение:"),
+            input_field,
+            Text("Поддерживаемые операторы: конкатенация (ab), альтернация (a|b), звезда Клини (a*)", size=12, color=Colors.GREY),
+            Text("Используйте скобки для группировки: (a|b)*", size=12, color=Colors.GREY)
+        ], tight=True),
+        actions=[
+            ElevatedButton("Построить", on_click=on_submit),
             ElevatedButton("Отмена", on_click=lambda e: page.close(dialog)),
         ],
     )

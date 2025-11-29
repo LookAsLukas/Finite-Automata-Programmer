@@ -38,6 +38,8 @@ def _validate_automaton_before_export(attr):
         return "Алфавит пуст — добавьте символы!"
     if attr.start_state is None:
         return "Не выбрано начальное состояние!"
+    if attr.start_state not in attr.transitions or not attr.transitions.get(attr.start_state):
+        return "Начальное состояние должно иметь хотя бы один исходящий переход!"
     return None
 
 
