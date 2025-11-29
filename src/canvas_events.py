@@ -17,19 +17,24 @@ def add_node(e, attr, ui):
 def handle_canvas_click(e, attr, ui, page):
     """Обрабатывает одиночный клик на canvas"""
     x, y = e.local_x, e.local_y
-    clicked = get_clicked_node(x, y, attr.nodes)
+    clicked_node = get_clicked_node(x, y, attr.nodes)
+    clicked_start, clicked_transition = get_clicked_transition(x, y, attr.nodes, attr.transitions)
+
+
+    if hasattr(attr, 'selected_transition'):
+        attr.selected_transition = None
 
     if attr.placing_mode:
         add_node(e, attr, ui)
         return
 
-    if attr.transition_mode and clicked is not None:
+    if attr.transition_mode and clicked_node is not None:
         if attr.first_selected_node is None:
-            attr.first_selected_node = clicked
-            ui.transition_status.value = f"Выбрано начальное состояние: {clicked}"
+            attr.first_selected_node = clicked_node
+            ui.transition_status.value = f"Выбрано начальное состояние: {clicked_node}"
         else:
             start = attr.first_selected_node
-            end = clicked
+            end = clicked_node
             symbol = next(iter(attr.alphabet)) if attr.alphabet else "a"
             attr.transitions.setdefault(start, []).append({"symbol": symbol, "end": end})
             attr.first_selected_node = None
@@ -39,12 +44,25 @@ def handle_canvas_click(e, attr, ui, page):
         return
 
     if not attr.placing_mode and not attr.transition_mode:
-        if clicked is not None:
-            attr.selected_node = clicked
-            ui.status_text.value = f"Выбран узел: {clicked}"
-            draw_nodes(attr, ui)
-            page.update()
 
+        if clicked_transition:
+
+            attr.selected_transition = (clicked_start, clicked_transition)
+            attr.selected_node = None
+            symbol = clicked_transition["symbol"]
+            end = clicked_transition["end"]
+            ui.status_text.value = f"Выбран переход: {clicked_start} → {end} ('{symbol}')"
+        elif clicked_node is not None:
+
+            attr.selected_node = clicked_node
+            ui.status_text.value = f"Выбран узел: {clicked_node}"
+        else:
+
+            attr.selected_node = None
+            ui.status_text.value = "Сброс выбора"
+        
+        draw_nodes(attr, ui)
+        page.update()
 
 def handle_double_click(e, attr, ui, page):
     """Обрабатывает двойной клик на canvas"""

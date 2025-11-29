@@ -27,7 +27,8 @@ from edit_events import (
     toggle_start_state,
     toggle_transition_mode,
     add_alphabet_symbol,
-    clear_automaton
+    clear_automaton,
+    handle_delete
 )
 from interaction_events import (
     handle_run,
@@ -69,6 +70,7 @@ def main(page: Page):
     )
 
     # Кнопки
+    delete_button = ElevatedButton("Удалить", on_click=lambda e: handle_delete(e, attr, ui, page))
     place_mode_button = ElevatedButton("Режим добавления состояний", on_click=lambda e: toggle_placing_mode(e, attr, ui, page))
     transition_mode_button = ElevatedButton("Режим добавления переходов", on_click=lambda e: toggle_transition_mode(e, attr, ui, page))
     start_button = ElevatedButton("Переключить начальное состояние", on_click=lambda e: toggle_start_state(e, attr, ui, page))
@@ -121,7 +123,7 @@ def main(page: Page):
                                     Card(
                                         content=Container(
                                             content=Column(
-                                                [Text("Режимы", size=18, weight="bold"), place_mode_button, transition_mode_button],
+                                                [Text("Режимы", size=18, weight="bold"), place_mode_button, transition_mode_button, delete_button],
                                                 spacing=10,
                                             ),
                                             padding=10,
