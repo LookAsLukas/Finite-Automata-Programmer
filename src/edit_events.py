@@ -85,30 +85,45 @@ def clear_automaton(e, attr, ui, page):
     ui.alphabet_input.value = ""
     page.update()
 
+
 def handle_delete(e, attr, ui, page):
     if attr.selected_node:
-        pass
-        #delete_state(attr.selected_node, attr, ui, page)
-    elif hasattr(attr, 'selected_transition') and attr.selected_transition:
+        delete_state(attr.selected_node, attr, ui, page)
+    elif attr.selected_transition:
         delete_transition(attr.selected_transition, attr, ui, page)
     else:
         ui.status_text.value = "Ничего не выбрано для удаления"
     
     page.update()
 
+
+def delete_state(state, attr, ui, page):
+    for state, transition_list in attr.transitions.items():
+        for to_delete in filter(lambda t: t["end"] == state, transition_list):
+            delete_transition(to_delete, attr, ui, page)
+
+    if state in attr.nodes:
+        del attr.nodes[state]
+    if state in attr.transitions:
+        del attr.transitions[state]
+
+    attr.selected_node = None
+
+    ui.status_text.value = f"Состояние {state} удалено"
+
+    from draw import draw_nodes
+    draw_nodes(attr, ui)
+
+
 def delete_transition(transition_info, attr, ui, page):
     start_name, transition = transition_info
     
     if start_name in attr.transitions and transition in attr.transitions[start_name]:
         attr.transitions[start_name].remove(transition)
-
-        if not attr.transitions[start_name]:
-            del attr.transitions[start_name]
         
         ui.status_text.value = f"Переход {start_name} → {transition['end']} удалён"
         
-        if hasattr(attr, 'selected_transition'):
-            attr.selected_transition = None
+        attr.selected_transition = None
         
         from draw import draw_nodes
         draw_nodes(attr, ui)

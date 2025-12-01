@@ -55,10 +55,9 @@ def draw_transitions(attr, ui):
             start_x, start_y = x1 + ux * 30, y1 + uy * 30
             end_x, end_y = x2 - ux * 30, y2 - uy * 30
 
-            is_selected = (hasattr(attr, 'selected_transition') and 
-                          attr.selected_transition and 
-                          attr.selected_transition[0] == start and 
-                          attr.selected_transition[1] == t)
+            is_selected = attr.selected_transition and \
+                          attr.selected_transition[0] == start and \
+                          attr.selected_transition[1] == t
 
             line_color = Colors.BLUE_800 if is_selected else Colors.BLACK
             line_width = 4 if is_selected else 2
