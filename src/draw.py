@@ -85,61 +85,6 @@ def calc_lines(symbols, paint, start: Vector2D, end: Vector2D, double):
         )
     ]
 
-
-def calc_double_lines(symbolsf, symbolsb, paintf, paintb, start: Vector2D, end: Vector2D):
-    dir = (end - start).normalized()
-    line_gap = 10
-    linef_start = start + dir.turned(-math.asin(line_gap / 2 / 30)) * 30
-    linef_end = end - dir.turned(math.asin(line_gap / 2 / 30)) * 30
-    lineb_start = start + dir.turned(math.asin(line_gap / 2 / 30)) * 30
-    lineb_end = end - dir.turned(-math.asin(line_gap / 2 / 30)) * 30
-
-    arrow_size = 15
-    arrowf = linef_end + (dir * arrow_size).turned(205 * math.pi / 180)
-    arrowb = lineb_start + (dir * arrow_size).turned(25 * math.pi / 180)
-
-    text_distance = 10
-    text_rotation = dir.phi() + (start.x > end.x) * math.pi
-    textf_position = (linef_start + linef_end) / 2 - dir.perpendicular() * text_distance
-    textb_position = (lineb_start + lineb_end) / 2 + dir.perpendicular() * text_distance
-
-    return [
-        canvas.Line(
-            x1=linef_start.x, y1=linef_start.y,
-            x2=linef_end.x, y2=linef_end.y,
-            paint=paintf
-        ),
-        canvas.Line(
-            x1=lineb_start.x, y1=lineb_start.y,
-            x2=lineb_end.x, y2=lineb_end.y,
-            paint=paintb
-        ),
-        canvas.Line(
-            x1=arrowf.x, y1=arrowf.y,
-            x2=linef_end.x, y2=linef_end.y,
-            paint=paintf
-        ),
-        canvas.Line(
-            x1=arrowb.x, y1=arrowb.y,
-            x2=lineb_start.x, y2=lineb_start.y,
-            paint=paintb
-        ),
-        canvas.Text(
-            x=textf_position.x, y=textf_position.y,
-            text=symbolsf,
-            style=TextStyle(size=18, weight=FontWeight.BOLD, color=paintf.color),
-            alignment=flet.alignment.center,
-            rotate=text_rotation
-        ),
-        canvas.Text(
-            x=textb_position.x, y=textb_position.y,
-            text=symbolsb,
-            style=TextStyle(size=18, weight=FontWeight.BOLD, color=paintb.color),
-            alignment=flet.alignment.center,
-            rotate=text_rotation
-        )
-    ]
-
 def draw_transitions(attr, ui): 
     elements = []
     for start, trans_list in attr.transitions.items():
