@@ -16,7 +16,8 @@ class ApplicationAttributes:
     transition_mode = False
     alphabet = set()
     dragging_node = None  # имя перетаскиваемого узла
-    current_regex = ""  
+    selected_transition = None
+    regex = ""
 
 
 @dataclass
@@ -29,6 +30,6 @@ class ApplicationUI:
     transition_status = Text("Режим переходов: выключен", size=16, color=Colors.GREY_800)
     status_text = Text("Добавьте состояния или переходы", size=16, color=Colors.GREY_800)
     alphabet_display = Text("Алфавит: ∅", size=16, color=Colors.BLUE_800)
-    regex_display = Text("Регулярное выражение: не задано", size=16, color=Colors.GREEN_800) 
     open_file_picker = None
     save_file_picker = None
+    regex_display = Text("Регулярное выражение: не задано", size=16, color=Colors.GREEN_800)

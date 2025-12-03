@@ -34,8 +34,7 @@ def draw_nodes(attr, ui):
     ui.drawing_area.shapes = elements + transition_elements
     ui.drawing_area.update()
 
-
-def draw_transitions(attr, ui):
+def draw_transitions(attr, ui): 
     elements = []
     for start, trans_list in attr.transitions.items():
         if start not in attr.nodes:
@@ -56,9 +55,17 @@ def draw_transitions(attr, ui):
             start_x, start_y = x1 + ux * 30, y1 + uy * 30
             end_x, end_y = x2 - ux * 30, y2 - uy * 30
 
+            is_selected = (hasattr(attr, 'selected_transition') and 
+                          attr.selected_transition and 
+                          attr.selected_transition[0] == start and 
+                          attr.selected_transition[1] == t)
+
+            line_color = Colors.BLUE_800 if is_selected else Colors.BLACK
+            line_width = 4 if is_selected else 2
+
             elements.append(canvas.Line(
                 x1=start_x, y1=start_y, x2=end_x, y2=end_y,
-                paint=flet.Paint(Colors.BLACK, stroke_width=2)
+                paint=flet.Paint(line_color, stroke_width=line_width)
             ))
 
             arrow_size = 10
@@ -67,21 +74,20 @@ def draw_transitions(attr, ui):
                 x1=end_x, y1=end_y,
                 x2=end_x - ux * arrow_size + perp_x * arrow_size,
                 y2=end_y - uy * arrow_size + perp_y * arrow_size,
-                paint=flet.Paint(Colors.BLACK, stroke_width=2)
+                paint=flet.Paint(line_color, stroke_width=line_width)
             ))
             elements.append(canvas.Line(
                 x1=end_x, y1=end_y,
                 x2=end_x - ux * arrow_size - perp_x * arrow_size,
                 y2=end_y - uy * arrow_size - perp_y * arrow_size,
-                paint=flet.Paint(Colors.BLACK, stroke_width=2)
+                paint=flet.Paint(line_color, stroke_width=line_width)
             ))
 
-            label_symbol = "ε" if symbol == "" else symbol
             label = canvas.Text(
                 x=(x1 + x2) / 2 + 10,
                 y=(y1 + y2) / 2 - 10,
-                text=label_symbol,
-                style=TextStyle(size=18, weight=FontWeight.BOLD)
+                text=symbol,
+                style=TextStyle(size=18, weight=FontWeight.BOLD, color=line_color)
             )
             elements.append(label)
 
