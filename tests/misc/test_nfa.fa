@@ -1,0 +1,28 @@
+{
+    "type": "NFA",
+    "states": [
+        "a",
+        "c",
+        "b"
+    ],
+    "input_symbols": [
+        "0",
+        "1"
+    ],
+    "transitions": {
+        "a": {
+            "1": [
+                "b"
+            ]
+        },
+        "b": {
+            "1": [
+                "a"
+            ]
+        }
+    },
+    "initial_state": "a",
+    "final_states": [
+        "a"
+    ]
+}

@@ -3,6 +3,8 @@ from collections.abc import Iterable
 from typing import List, Tuple, Dict, Set, Any
 import igraph as ig
 
+import igraph as ig
+
 
 def prepare_automaton_layout(
     automaton,
