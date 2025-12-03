@@ -17,6 +17,7 @@ class ApplicationAttributes:
     alphabet = set()
     dragging_node = None  # имя перетаскиваемого узла
     selected_transition = None
+    regex = ""
 
 
 @dataclass
@@ -31,3 +32,4 @@ class ApplicationUI:
     alphabet_display = Text("Алфавит: ∅", size=16, color=Colors.BLUE_800)
     open_file_picker = None
     save_file_picker = None
+    regex_display = Text("Регулярное выражение: не задано", size=16, color=Colors.GREEN_800)

@@ -37,7 +37,7 @@ from interaction_events import (
     handle_open_file_result,
     handle_save_file_result,
 )
-
+from dialog_handlers import regex_input_dialog
 
 def main(page: Page):
     page.title = "FAP — Визуальный конструктор НКА"
@@ -78,6 +78,8 @@ def main(page: Page):
     run_button = ElevatedButton("Обработать слово", on_click=lambda e: handle_run(e, attr, ui, page))
     add_alphabet_button = ElevatedButton("Добавить символ", on_click=lambda e: add_alphabet_symbol(e, attr, ui, page))
     clear_button = ElevatedButton("Очистить автомат", on_click=lambda e: clear_automaton(e, attr, ui, page))
+    regex_button = ElevatedButton("Построить из регулярного выражения", on_click=lambda e: page.open(regex_input_dialog(attr, ui, page))
+)
 
     gesture_area = GestureDetector(
     content=ui.drawing_area,
@@ -135,6 +137,19 @@ def main(page: Page):
                                                 [Text("Алфавит", size=18, weight="bold"),
                                                  Row([ui.alphabet_input, add_alphabet_button], spacing=10),
                                                  ui.alphabet_display],
+                                                spacing=10,
+                                            ),
+                                            padding=10,
+                                        )
+                                    ),
+                                    Card(
+                                        content=Container(
+                                            content=Column(
+                                                [
+                                                    Text("Регулярные выражения", size=18, weight="bold"),
+                                                    ui.regex_display,
+                                                    regex_button,
+                                                ],
                                                 spacing=10,
                                             ),
                                             padding=10,

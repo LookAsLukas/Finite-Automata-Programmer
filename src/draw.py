@@ -34,7 +34,7 @@ def draw_nodes(attr, ui):
     ui.drawing_area.shapes = elements + transition_elements
     ui.drawing_area.update()
 
-def draw_transitions(attr, ui):
+def draw_transitions(attr, ui): 
     elements = []
     for start, trans_list in attr.transitions.items():
         if start not in attr.nodes:

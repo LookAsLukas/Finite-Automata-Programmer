@@ -55,7 +55,7 @@ def export_nfa_to_path(export_path, attr, ui, page):
             ui.status_text.value = "Автомат неполный — экспорт невозможен!"
             page.update()
             return
-        save_automaton_to_json(nfa, export_path)
+        save_automaton_to_json(nfa, export_path, attr.regex)
         ui.status_text.value = f"✅ NFA экспортирован в файл {export_path}"
     except Exception as err:
         ui.status_text.value = f"Ошибка экспорта: {err}"
@@ -63,14 +63,16 @@ def export_nfa_to_path(export_path, attr, ui, page):
 
 
 def import_automaton_from_path(file_path, attr, ui, page):
-    """Импорт автомата из JSON файла по указанному пути."""
-    automaton = load_automaton_from_json(file_path)
+    automaton, regex = load_automaton_from_json(file_path)
     if automaton is None:
         ui.status_text.value = f"Не удалось загрузить автомат из {file_path}"
         page.update()
         return
 
     if import_automaton_data(automaton, attr, ui):
+        if regex:
+            attr.regex = regex
+            ui.regex_display.value = f"Регулярное выражение: {regex}"
         draw_nodes(attr, ui)
         page.update()
 

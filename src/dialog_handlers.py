@@ -1,6 +1,5 @@
 from flet import Text, TextField, ElevatedButton, AlertDialog
 
-
 def rename_state_dialog(name: str, attr, ui, page):
     """Создает диалог для переименования состояния."""
     def on_submit(e):
@@ -79,6 +78,65 @@ def edit_transition_dialog(start: str, transition: dict, attr, ui, page):
         content=input_field,
         actions=[
             ElevatedButton("OK", on_click=on_submit),
+            ElevatedButton("Отмена", on_click=lambda e: page.close(dialog)),
+        ],
+    )
+    return dialog
+
+def regex_input_dialog(attr, ui, page):
+    def on_submit(e):
+        regex_str = input_field.value.strip()
+        if not regex_str:
+            ui.status_text.value = "Введите регулярное выражение!"
+            page.close(dialog)
+            page.update()
+            return
+
+        page.close(dialog)
+        
+        from automata_operations import convert_regex_to_nfa, import_automaton_data
+        from draw import draw_nodes
+        
+        # Пробуем преобразовать regex в NFA
+        nfa = convert_regex_to_nfa(regex_str)
+        
+        if nfa is None:
+            error_dialog = AlertDialog(
+                modal=True,
+                title=Text("Ошибка синтаксиса"),
+                content=Text(f"Регулярное выражение '{regex_str}' содержит синтаксические ошибки."),
+                actions=[
+                    ElevatedButton("OK", on_click=lambda e: page.close(error_dialog)),
+                ],
+            )
+            page.open(error_dialog)
+            ui.status_text.value = f"❌ Ошибка в регулярном выражении: '{regex_str}'"
+        else:
+            # Сохраняем регулярное выражение
+            attr.regex = regex_str
+            ui.regex_display.value = f"Регулярное выражение: {regex_str}"
+            
+            # Импортируем автомат
+            if import_automaton_data(nfa, attr, ui):
+                draw_nodes(attr, ui)
+                ui.status_text.value = f"✅ Автомат построен из регулярного выражения: {regex_str}"
+            else:
+                ui.status_text.value = f"❌ Ошибка при построении автомата из регулярного выражения"
+        
+        page.update()
+
+    input_field = TextField(
+        label="Регулярное выражение", 
+        hint_text="Пример: (a|b)*abb",
+        autofocus=True,
+        width=400
+    )
+    dialog = AlertDialog(
+        modal=True,
+        title=Text("Построение автомата из регулярного выражения"),
+        content=input_field,
+        actions=[
+            ElevatedButton("Построить", on_click=on_submit),
             ElevatedButton("Отмена", on_click=lambda e: page.close(dialog)),
         ],
     )

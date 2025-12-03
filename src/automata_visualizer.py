@@ -1,6 +1,7 @@
 import math
 from collections.abc import Iterable
 from typing import List, Tuple, Dict, Set, Any
+import igraph as ig
 
 import igraph as ig
 
@@ -129,3 +130,18 @@ def prepare_automaton_layout(
     alphabet = set(getattr(automaton, "input_symbols", set()))
 
     return nodes, states, transitions, final_state_indices, start_state_index, alphabet
+
+import igraph as ig
+
+def convert_automaton_to_igraph(attr):
+    g = ig.Graph(directed=True)
+    g.add_vertices(attr.states)
+    edges = []
+    labels = []
+    for (src, symbol), dst_list in attr.transitions.items():
+        for dst in dst_list:
+            edges.append((src, dst))
+            labels.append(symbol)
+    g.add_edges(edges)
+    g.es["label"] = labels
+    return g

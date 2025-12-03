@@ -76,6 +76,7 @@ def clear_automaton(e, attr, ui, page):
     attr.placing_mode = False
     attr.transition_mode = False
     attr.alphabet.clear()
+    attr.regex = ""
 
     ui.drawing_area.shapes = []
     ui.mode_status.value = "Режим размещения: выключен"
@@ -83,6 +84,7 @@ def clear_automaton(e, attr, ui, page):
     ui.status_text.value = "Автомат очищен"
     ui.alphabet_display.value = "Алфавит: ∅"
     ui.alphabet_input.value = ""
+    ui.regex_display.value = "Регулярное выражение: не задано"
     page.update()
 
 def handle_delete(e, attr, ui, page):

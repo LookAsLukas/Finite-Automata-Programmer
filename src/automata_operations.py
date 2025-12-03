@@ -32,12 +32,10 @@ def build_nfa_from_ui(attr):
 
 
 def import_automaton_data(automaton, attr, ui):
-    """Импортирует данные автомата в UI"""
     try:
         layout = prepare_automaton_layout(automaton, canvas_width=700, canvas_height=450)
         layout_nodes, layout_state_names, layout_transitions, layout_final_states, layout_start_index, layout_alphabet = layout
 
-        # Конвертируем формат данных из automata_visualizer в наш формат
         attr.nodes = {}
         for i, (x, y) in enumerate(layout_nodes):
             attr.nodes[layout_state_names[i]] = (x, y)
@@ -68,3 +66,18 @@ def import_automaton_data(automaton, attr, ui):
     except Exception as ex:
         ui.status_text.value = f"Ошибка при импорте автомата: {ex}"
         return False
+
+
+def convert_regex_to_nfa(regex_str: str):
+    """
+    Преобразует регулярное выражение в NFA с использованием automata-lib.
+    Использует метод класса NFA.from_regex() для преобразования.
+    Возвращает объект NFA или None в случае ошибки.
+    """
+    try:
+        # Используем метод класса from_regex для создания NFA из регулярного выражения
+        nfa = NFA.from_regex(regex_str)
+        return nfa
+    except Exception as e:
+        print(f"Ошибка при преобразовании regex в NFA: {e}")
+        return None
