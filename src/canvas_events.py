@@ -20,9 +20,7 @@ def handle_canvas_click(e, attr, ui, page):
     clicked_node = get_clicked_node(x, y, attr.nodes)
     clicked_start, clicked_transition = get_clicked_transition(x, y, attr.nodes, attr.transitions)
 
-
-    if hasattr(attr, 'selected_transition'):
-        attr.selected_transition = None
+    attr.selected_transition = None
 
     if attr.placing_mode:
         add_node(e, attr, ui)
@@ -44,20 +42,16 @@ def handle_canvas_click(e, attr, ui, page):
         return
 
     if not attr.placing_mode and not attr.transition_mode:
-
         if clicked_transition:
-
             attr.selected_transition = (clicked_start, clicked_transition)
             attr.selected_node = None
             symbol = clicked_transition["symbol"]
             end = clicked_transition["end"]
             ui.status_text.value = f"Выбран переход: {clicked_start} → {end} ('{symbol}')"
         elif clicked_node is not None:
-
             attr.selected_node = clicked_node
             ui.status_text.value = f"Выбран узел: {clicked_node}"
         else:
-
             attr.selected_node = None
             ui.status_text.value = "Сброс выбора"
         
