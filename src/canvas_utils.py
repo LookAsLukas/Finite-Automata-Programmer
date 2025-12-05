@@ -1,5 +1,6 @@
 import math
 from typing import Tuple, Optional, Dict, List, Any
+from linal import Vector2D, dot_product
 
 
 def get_clicked_node(x: float, y: float, nodes: Dict[str, Tuple[float, float]]) -> Optional[str]:
@@ -13,7 +14,8 @@ def get_clicked_node(x: float, y: float, nodes: Dict[str, Tuple[float, float]]) 
 def get_clicked_transition(x: float, y: float, nodes: Dict[str, Tuple[float, float]], 
                           transitions: Dict[str, List[Dict[str, Any]]]) -> Tuple[Optional[str], Optional[Dict]]:
     """Определяет, по какому переходу кликнули."""
-    threshold = 10
+    threshold = 5
+    click = Vector2D(x, y)
     for start, trans_list in transitions.items():
         if start not in nodes:
             continue
@@ -24,23 +26,32 @@ def get_clicked_transition(x: float, y: float, nodes: Dict[str, Tuple[float, flo
                 continue
             (x2, y2) = nodes[end]
 
-            dx, dy = x2 - x1, y2 - y1
-            length = math.sqrt(dx ** 2 + dy ** 2)
-            if length == 0:
+            start_p = Vector2D(x1, y1)
+            end_p = Vector2D(x2, y2)
+            if (end_p - start_p).length() == 0:
                 continue
 
-            ux, uy = dx / length, dy / length
-            start_x, start_y = x1 + ux * 30, y1 + uy * 30
-            end_x, end_y = x2 - ux * 30, y2 - uy * 30
+            double = False
+            for tt in transitions.get(end, []):
+                if tt["end"] == start:
+                    double = True
+                    break
+            dir = (end_p - start_p).normalized()
+            if double:
+                line_gap = 10
+                start_p += dir.turned(-math.asin(line_gap / 2 / 30)) * 30
+                end_p -= dir.turned(math.asin(line_gap / 2 / 30)) * 30
+            else:
+                start_p += dir * 30
+                end_p -= dir * 30
 
             # Let's call start point A, click point B,
             # End point C and distance point D
-            ab = (x - start_x, y - start_y)
-            ac = (end_x - start_x, end_y - start_y)
-            ac_len = math.sqrt(ac[0] ** 2 + ac[1] ** 2)
-            ad_len = (ab[0] * ac[0] + ab[1] * ac[1]) / ac_len
-            bd_len = math.sqrt((ab[0] ** 2 + ab[1] ** 2) - ad_len ** 2)
-            if bd_len <= threshold and 0 <= ad_len <= ac_len:
+            ab = click - start_p
+            ac = end_p - start_p
+            ad_len = dot_product(ab, ac) / ac.length()
+            bd_len = math.sqrt(ab.length() ** 2 - ad_len ** 2)
+            if bd_len <= threshold and 0 <= ad_len <= ac.length():
                 return start, t
 
     return None, None
