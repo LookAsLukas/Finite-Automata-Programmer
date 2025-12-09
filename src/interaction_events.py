@@ -1,3 +1,5 @@
+import os
+
 from automata_operations import build_nfa_from_ui, import_automaton_data
 from automata_io import load_automaton_from_json, save_automaton_to_json
 from draw import draw_nodes
@@ -41,6 +43,14 @@ def _validate_automaton_before_export(attr):
     return None
 
 
+def _ensure_json_extension(file_path):
+    """Гарантирует, что экспорт сохраняется в файл .json."""
+    base, ext = os.path.splitext(file_path)
+    if ext.lower() != ".json":
+        return f"{base}.json"
+    return file_path
+
+
 def export_nfa_to_path(export_path, attr, ui, page):
     """Экспорт автомата в JSON файл по указанному пути."""
     error_message = _validate_automaton_before_export(attr)
@@ -49,6 +59,7 @@ def export_nfa_to_path(export_path, attr, ui, page):
         page.update()
         return
 
+    export_path = _ensure_json_extension(export_path)
     try:
         nfa = build_nfa_from_ui(attr)
         if nfa is None:
