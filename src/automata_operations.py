@@ -3,32 +3,52 @@ from automata_visualizer import prepare_automaton_layout
 
 
 def build_nfa_from_ui(attr):
-    """Создает объект NFA из automata-lib на основе текущего автомата"""
+    """
+    Создает объект NFA, автоматически отфильтровывая переходы 
+    в удаленные/несуществующие состояния.
+    """
     if not attr.nodes or attr.start_state is None:
         return None
 
     states = set(attr.nodes.keys())
-    initial_state = attr.start_state
-    final_state_names = attr.final_states
+    
+    if attr.start_state not in states:
+        return None
+
+    final_state_names = {s for s in attr.final_states if s in states}
 
     nfa_transitions = {}
+    
     for start_name, trans_list in attr.transitions.items():
+        if start_name not in states:
+            continue
+            
         nfa_transitions[start_name] = {}
+        
         for t in trans_list:
             symbol = t["symbol"]
             end_name = t["end"]
+            
+            if end_name not in states:
+                continue
+                
             nfa_transitions[start_name].setdefault(symbol, set()).add(end_name)
 
     for name in states:
-        nfa_transitions.setdefault(name, {})
+        if name not in nfa_transitions:
+            nfa_transitions[name] = {}
 
-    return NFA(
-        states=states,
-        input_symbols=set(attr.alphabet),
-        transitions=nfa_transitions,
-        initial_state=initial_state,
-        final_states=final_state_names,
-    )
+    try:
+        return NFA(
+            states=states,
+            input_symbols=set(attr.alphabet),
+            transitions=nfa_transitions,
+            initial_state=attr.start_state,
+            final_states=final_state_names,
+        )
+    except Exception as e:
+        print(f"Critical Error building NFA: {e}")
+        return None
 
 
 def import_automaton_data(automaton, attr, ui):
@@ -60,7 +80,7 @@ def import_automaton_data(automaton, attr, ui):
         ui.alphabet_display.value = f"Алфавит: {', '.join(sorted(attr.alphabet))}" if attr.alphabet else "Алфавит: ∅"
         ui.mode_status.value = "Режим размещения: выключен"
         ui.transition_status.value = "Режим переходов: выключен"
-        ui.status_text.value = "✅ Автомат импортирован из nfa.json"
+        ui.status_text.value = "Автомат импортирован"
 
         return True
     except Exception as ex:
