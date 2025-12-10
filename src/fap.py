@@ -16,8 +16,9 @@ from flet import (
     PopupMenuButton,
     PopupMenuItem,
     FilePicker,
+    Stack,
 )
-# Предполагается, что эти модули лежат в той же папке
+
 from draw import draw_nodes
 from application_state import ApplicationUI, ApplicationAttributes
 from canvas_events import handle_drag_start, handle_drag_update, handle_drag_end
@@ -45,6 +46,11 @@ def main(page: Page):
     page.title = "FAP — Визуальный конструктор НКА"
     page.padding = 0
     page.bgcolor = Colors.BLUE_GREY_50
+    
+    page.window_width = 1200
+    page.window_height = 700
+    page.window_min_width = 1000
+    page.window_min_height = 600
 
     attr = ApplicationAttributes()
     ui = ApplicationUI()
@@ -79,8 +85,18 @@ def main(page: Page):
     regex_button = ElevatedButton("Построить из регулярного выражения", on_click=lambda e: page.open(regex_input_dialog(attr, ui, page)))
     optimize_button = ElevatedButton("Оптимизировать (Min DFA)", on_click=lambda e: handle_optimize_click(e, attr, ui, page),bgcolor=Colors.GREEN_100, color=Colors.GREEN_900)
 
+    canvas_container = Container(
+        width=700,  
+        height=450,  
+        bgcolor=Colors.WHITE,
+        border_radius=10,
+        alignment=alignment.center,
+    )
+    
+    canvas_container.content = ui.drawing_area
+    
     gesture_area = GestureDetector(
-        content=ui.drawing_area,
+        content=canvas_container,
         on_tap_down=lambda e: handle_canvas_click(e, attr, ui, page),
         on_double_tap_down=lambda e: handle_double_click(e, attr, ui, page),
         on_pan_start=lambda e: handle_drag_start(e, attr, ui, page),
@@ -90,11 +106,8 @@ def main(page: Page):
 
     # ---------- Компоновка ----------
     graph_area = Container(
-        bgcolor=Colors.WHITE,
-        height=450, 
-        border_radius=10,
-        alignment=alignment.center,
         content=gesture_area,
+        alignment=alignment.center,
     )
 
     page.add(
@@ -107,7 +120,7 @@ def main(page: Page):
                             content=Column(
                                 [
                                     Text("Визуальный автомат (NFA)", size=24, weight="bold"),
-                                    graph_area,
+                                    graph_area, 
                                     Column([ui.mode_status, ui.transition_status, ui.status_text], spacing=5),
                                     Row([ui.word_input, run_button], spacing=10),
                                 ],

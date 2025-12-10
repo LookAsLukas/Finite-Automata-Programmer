@@ -58,6 +58,8 @@ def import_automaton_data(automaton, attr, ui):
 
         attr.nodes = {}
         for i, (x, y) in enumerate(layout_nodes):
+            x = max(30, min(670, x))  
+            y = max(30, min(420, y)) 
             attr.nodes[layout_state_names[i]] = (x, y)
         
         attr.transitions = {}
@@ -89,13 +91,7 @@ def import_automaton_data(automaton, attr, ui):
 
 
 def convert_regex_to_nfa(regex_str: str):
-    """
-    Преобразует регулярное выражение в NFA с использованием automata-lib.
-    Использует метод класса NFA.from_regex() для преобразования.
-    Возвращает объект NFA или None в случае ошибки.
-    """
     try:
-        # Используем метод класса from_regex для создания NFA из регулярного выражения
         nfa = NFA.from_regex(regex_str)
         return nfa
     except Exception as e:
