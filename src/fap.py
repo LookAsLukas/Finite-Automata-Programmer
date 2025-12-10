@@ -40,6 +40,7 @@ from interaction_events import (
     handle_save_file_result,
 )
 from dialog_handlers import regex_input_dialog
+from automaton_optimization import handle_optimize_click
 
 def main(page: Page):
     page.title = "FAP — Визуальный конструктор НКА"
@@ -82,6 +83,7 @@ def main(page: Page):
     add_alphabet_button = ElevatedButton("Добавить символ", on_click=lambda e: add_alphabet_symbol(e, attr, ui, page))
     clear_button = ElevatedButton("Очистить автомат", on_click=lambda e: clear_automaton(e, attr, ui, page))
     regex_button = ElevatedButton("Построить из регулярного выражения", on_click=lambda e: page.open(regex_input_dialog(attr, ui, page)))
+    optimize_button = ElevatedButton("Оптимизировать (Min DFA)", on_click=lambda e: handle_optimize_click(e, attr, ui, page),bgcolor=Colors.GREEN_100, color=Colors.GREEN_900)
 
     canvas_container = Container(
         width=700,  
@@ -135,7 +137,7 @@ def main(page: Page):
                                     Card(content=Container(content=Column([Text("Режимы", size=18, weight="bold"), place_mode_button, transition_mode_button, delete_button], spacing=10, horizontal_alignment=CrossAxisAlignment.STRETCH), padding=10)),
                                     Card(content=Container(content=Column([Text("Алфавит", size=18, weight="bold"), Row([ui.alphabet_input, add_alphabet_button], spacing=10), ui.alphabet_display], spacing=10, horizontal_alignment=CrossAxisAlignment.STRETCH), padding=10)),
                                     Card(content=Container(content=Column([Text("Регулярные выражения", size=18, weight="bold"), ui.regex_display, regex_button], spacing=10, horizontal_alignment=CrossAxisAlignment.STRETCH), padding=10)),
-                                    start_button, final_button, clear_button,
+                                    start_button, final_button, clear_button, optimize_button,
                                 ],
                                 spacing=20,
                                 alignment=MainAxisAlignment.START,
