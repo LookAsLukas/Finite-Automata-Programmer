@@ -3,8 +3,6 @@ from collections.abc import Iterable
 from typing import List, Tuple, Dict, Set, Any
 import igraph as ig
 
-import igraph as ig
-
 
 def prepare_automaton_layout(
     automaton,
@@ -12,19 +10,6 @@ def prepare_automaton_layout(
     canvas_height: int = 450,
     margin: int = 60,
 ) -> Tuple[List[Tuple[float, float]], List[str], Dict[int, List[Dict[str, Any]]], Set[int], int, Set[str]]:
-    """
-    Формирует расположение состояний автомата на плоскости (через igraph) и
-    возвращает данные для отрисовки. При сбое расчета раскладки используется
-    резервный круговой расклад.
-
-    Returns:
-        nodes: список координат (x, y) для состояний.
-        state_names: список имен состояний, индекс соответствует nodes.
-        transitions: словарь индекс -> список переходов {symbol, end}.
-        final_state_indices: множество индексов конечных состояний.
-        start_state_index: индекс стартового состояния.
-        alphabet: множество допустимых символов.
-    """
     if not hasattr(automaton, "states"):
         raise ValueError("Некорректный автомат: отсутствует поле states")
 
@@ -41,7 +26,6 @@ def prepare_automaton_layout(
     center_y = canvas_height / 2
 
     def _fallback_circle_layout() -> List[Tuple[float, float]]:
-        """Возвращает координаты по окружности как запасной вариант."""
         nodes_circle = []
         radius = max(min(canvas_width, canvas_height) / 2 - margin, 80)
         for idx in range(count):
@@ -74,11 +58,9 @@ def prepare_automaton_layout(
             graph.add_edges(edges)
 
         try:
-            # Force-directed раскладка дает более естественный вид, чем круговой.
             layout = graph.layout_fruchterman_reingold() if edges else graph.layout_circle()
             coords = layout.coords
         except Exception:
-            # Если что-то пошло не так, вернемся к резервному кругу.
             nodes = _fallback_circle_layout()
             coords = []
 
@@ -131,7 +113,6 @@ def prepare_automaton_layout(
 
     return nodes, states, transitions, final_state_indices, start_state_index, alphabet
 
-import igraph as ig
 
 def convert_automaton_to_igraph(attr):
     g = ig.Graph(directed=True)
