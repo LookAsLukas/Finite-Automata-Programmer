@@ -13,7 +13,7 @@ def get_clicked_node(x: float, y: float, nodes: Dict[str, Tuple[float, float]]) 
 def get_clicked_transition(x: float, y: float, nodes: Dict[str, Tuple[float, float]], 
                           transitions: Dict[str, List[Dict[str, Any]]]) -> Tuple[Optional[str], Optional[Dict]]:
     """Определяет, по какому переходу кликнули."""
-    threshold = 10  
+    threshold = 10
     for start, trans_list in transitions.items():
         if start not in nodes:
             continue
@@ -33,10 +33,14 @@ def get_clicked_transition(x: float, y: float, nodes: Dict[str, Tuple[float, flo
             start_x, start_y = x1 + ux * 30, y1 + uy * 30
             end_x, end_y = x2 - ux * 30, y2 - uy * 30
 
-            px, py = x, y
-            line_dist = abs((end_y - start_y) * px - (end_x - start_x) * py + end_x * start_y - end_y * start_x) / length
-            if line_dist <= threshold:
-                dot = ((px - start_x) * (end_x - start_x) + (py - start_y) * (end_y - start_y)) / (length ** 2)
-                if 0 <= dot <= 1:
-                    return start, t
+            # Let's call start point A, click point B,
+            # End point C and distance point D
+            ab = (x - start_x, y - start_y)
+            ac = (end_x - start_x, end_y - start_y)
+            ac_len = math.sqrt(ac[0] ** 2 + ac[1] ** 2)
+            ad_len = (ab[0] * ac[0] + ab[1] * ac[1]) / ac_len
+            bd_len = math.sqrt((ab[0] ** 2 + ab[1] ** 2) - ad_len ** 2)
+            if bd_len <= threshold and 0 <= ad_len <= ac_len:
+                return start, t
+
     return None, None
