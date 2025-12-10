@@ -95,12 +95,12 @@ def handle_delete(e, attr, ui, page):
         delete_transition(attr.selected_transition, attr, ui, page)
     else:
         ui.status_text.value = "Ничего не выбрано для удаления"
-    
+
     page.update()
 
 
 def delete_state(state, attr, ui, page):
-    for state, transition_list in attr.transitions.items():
+    for _, transition_list in attr.transitions.items():
         for to_delete in filter(lambda t: t["end"] == state, transition_list):
             delete_transition(to_delete, attr, ui, page)
 
@@ -108,8 +108,13 @@ def delete_state(state, attr, ui, page):
         del attr.nodes[state]
     if state in attr.transitions:
         del attr.transitions[state]
+    if state in attr.final_states:
+        attr.final_states.remove(state)
+    if state == attr.start_state:
+        attr.start_state = None
 
     attr.selected_node = None
+    attr.node_counter -= 1
 
     ui.status_text.value = f"Состояние {state} удалено"
 
