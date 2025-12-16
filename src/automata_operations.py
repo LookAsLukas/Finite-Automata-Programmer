@@ -1,6 +1,6 @@
 from automata.fa.nfa import NFA
 from automata_visualizer import prepare_automaton_layout
-
+from application_state import EPSILON_SYMBOL
 
 def build_nfa_from_ui(attr):
     """
@@ -15,8 +15,6 @@ def build_nfa_from_ui(attr):
     if attr.start_state not in states:
         return None
 
-    final_state_names = {s for s in attr.final_states if s in states}
-
     nfa_transitions = {}
     
     for start_name, trans_list in attr.transitions.items():
@@ -26,53 +24,70 @@ def build_nfa_from_ui(attr):
         nfa_transitions[start_name] = {}
         
         for t in trans_list:
-            symbol = t["symbol"]
+            symbol_ui = t["symbol"]
             end_name = t["end"]
             
             if end_name not in states:
                 continue
-                
-            nfa_transitions[start_name].setdefault(symbol, set()).add(end_name)
+            
+            logic_symbol = "" if symbol_ui == EPSILON_SYMBOL else symbol_ui
+            
+            nfa_transitions[start_name].setdefault(logic_symbol, set()).add(end_name)
 
     for name in states:
         if name not in nfa_transitions:
             nfa_transitions[name] = {}
 
     try:
+        input_symbols = {s for s in attr.alphabet if s != EPSILON_SYMBOL}
+
         return NFA(
             states=states,
-            input_symbols=set(attr.alphabet),
+            input_symbols=input_symbols,
             transitions=nfa_transitions,
             initial_state=attr.start_state,
-            final_states=final_state_names,
+            final_states={s for s in attr.final_states if s in states}
         )
     except Exception as e:
-        print(f"Critical Error building NFA: {e}")
+        print(f"Ошибка создания NFA: {e}")
         return None
 
 
 def import_automaton_data(automaton, attr, ui):
+    """
+    Импортирует данные из объекта DFA/NFA (automata-lib) в атрибуты приложения.
+    """
     try:
-        layout = prepare_automaton_layout(automaton, canvas_width=700, canvas_height=450)
-        layout_nodes, layout_state_names, layout_transitions, layout_final_states, layout_start_index, layout_alphabet = layout
-
-        attr.nodes = {}
-        for i, (x, y) in enumerate(layout_nodes):
-            x = max(30, min(670, x))  
-            y = max(30, min(420, y)) 
-            attr.nodes[layout_state_names[i]] = (x, y)
+        layout_nodes, layout_state_names, layout_transitions, layout_final_states, layout_start_index, layout_alphabet = prepare_automaton_layout(automaton)
         
+        attr.nodes.clear()
+        attr.final_states.clear()
+        attr.transitions.clear()
+        attr.alphabet.clear()
+        
+        for i, (x, y) in enumerate(layout_nodes):
+            name = layout_state_names[i]
+            attr.nodes[name] = (x, y)
+            
         attr.transitions = {}
         for start_idx, trans_list in layout_transitions.items():
             start_name = layout_state_names[start_idx]
             attr.transitions[start_name] = []
             for t in trans_list:
                 end_name = layout_state_names[t["end"]]
-                attr.transitions[start_name].append({"symbol": t["symbol"], "end": end_name})
+                
+                raw_symbol = t["symbol"]
+                ui_symbol = EPSILON_SYMBOL if raw_symbol == "" else raw_symbol
+                
+                attr.transitions[start_name].append({"symbol": ui_symbol, "end": end_name})
         
         attr.final_states = {layout_state_names[i] for i in layout_final_states}
         attr.start_state = layout_state_names[layout_start_index] if layout_start_index is not None else None
-        attr.alphabet = set(layout_alphabet)
+        
+        for s in layout_alphabet:
+            if s != "":
+                attr.alphabet.add(s)
+                
         attr.node_counter = len(layout_state_names)
         attr.placing_mode = False
         attr.transition_mode = False
@@ -87,13 +102,5 @@ def import_automaton_data(automaton, attr, ui):
         return True
     except Exception as ex:
         ui.status_text.value = f"Ошибка при импорте автомата: {ex}"
+        print(ex)
         return False
-
-
-def convert_regex_to_nfa(regex_str: str):
-    try:
-        nfa = NFA.from_regex(regex_str)
-        return nfa
-    except Exception as e:
-        print(f"Ошибка при преобразовании regex в NFA: {e}")
-        return None
