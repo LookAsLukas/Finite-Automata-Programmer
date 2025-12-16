@@ -16,7 +16,6 @@ from flet import (
     PopupMenuButton,
     PopupMenuItem,
     FilePicker,
-    Stack,
 )
 
 from draw import draw_nodes
@@ -47,10 +46,8 @@ def main(page: Page):
     page.padding = 0
     page.bgcolor = Colors.BLUE_GREY_50
     
-    page.window_width = 1200
-    page.window_height = 700
-    page.window_min_width = 1000
-    page.window_min_height = 600
+    # Убираем ВСЕ фиксированные размеры и ограничения
+    # Окно будет любого размера, какой задаст пользователь
 
     attr = ApplicationAttributes()
     ui = ApplicationUI()
@@ -85,9 +82,10 @@ def main(page: Page):
     regex_button = ElevatedButton("Построить из регулярного выражения", on_click=lambda e: page.open(regex_input_dialog(attr, ui, page)))
     optimize_button = ElevatedButton("Оптимизировать (Min DFA)", on_click=lambda e: handle_optimize_click(e, attr, ui, page),bgcolor=Colors.GREEN_100, color=Colors.GREEN_900)
 
+    # Канвас ФИКСИРОВАННОГО размера
     canvas_container = Container(
-        width=700,  
-        height=450,  
+        width=700,  # Фиксированная ширина
+        height=450,  # Фиксированная высота
         bgcolor=Colors.WHITE,
         border_radius=10,
         alignment=alignment.center,
@@ -110,28 +108,49 @@ def main(page: Page):
         alignment=alignment.center,
     )
 
+    # Делаем Row с полем ввода и кнопкой на всю доступную ширину
+    input_row = Row(
+        [
+            Container(
+                content=ui.word_input,
+                expand=True,  # Занимает всё доступное пространство
+            ),
+            run_button,
+        ],
+        spacing=10,
+        expand=True,  # Row тоже расширяется
+        vertical_alignment=CrossAxisAlignment.CENTER,
+    )
+
     page.add(
         Column(
             [
                 Row(
                     [
+                        # Левая часть с канвасом - занимает оставшееся пространство
                         Container(
-                            expand=True, 
+                            expand=True,
                             content=Column(
                                 [
                                     Text("Визуальный автомат (NFA)", size=24, weight="bold"),
-                                    graph_area, 
+                                    graph_area,
                                     Column([ui.mode_status, ui.transition_status, ui.status_text], spacing=5),
-                                    Row([ui.word_input, run_button], spacing=10),
+                                    Container(
+                                        content=input_row,
+                                        expand=True,  # Контейнер тоже расширяется
+                                    ),
                                 ],
                                 spacing=15,
-                                horizontal_alignment=CrossAxisAlignment.STRETCH 
+                                horizontal_alignment=CrossAxisAlignment.CENTER,
+                                expand=True,
                             ),
                             padding=20,
+                            alignment=alignment.center,
                         ),
+                        # Правая часть с кнопками - фиксированной ширины
                         Container(
                             padding=20,
-                            width=450, 
+                            width=450,  # Фиксированная ширина правой панели
                             content=Column(
                                 [
                                     Card(content=Container(content=Column([Text("Режимы", size=18, weight="bold"), place_mode_button, transition_mode_button, delete_button], spacing=10, horizontal_alignment=CrossAxisAlignment.STRETCH), padding=10)),
@@ -147,10 +166,11 @@ def main(page: Page):
                     ],
                     spacing=5,
                     vertical_alignment=CrossAxisAlignment.START,
+                    expand=True,
                 ),
             ],
             spacing=10,
-            expand=True
+            expand=True,
         )
     )
 
