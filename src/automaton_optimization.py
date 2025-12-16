@@ -3,10 +3,13 @@ from automata.fa.nfa import NFA
 from automata_operations import import_automaton_data
 
 def get_complete_alphabet(attr):
-    symbols = set(attr.alphabet)
+    symbols = {s for s in attr.alphabet if s != ""}
     for trans_list in attr.transitions.values():
         for t in trans_list:
-            symbols.add(t["symbol"])
+            symbol = t["symbol"]
+            if symbol == "":
+                continue
+            symbols.add(symbol)
     return symbols
 
 def safe_build_nfa(attr, ui):
