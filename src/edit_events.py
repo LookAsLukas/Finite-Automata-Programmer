@@ -114,7 +114,6 @@ def delete_state(state, attr, ui, page):
         attr.start_state = None
 
     attr.selected_node = None
-    attr.node_counter -= 1
 
     ui.status_text.value = f"Состояние {state} удалено"
 
@@ -124,13 +123,13 @@ def delete_state(state, attr, ui, page):
 
 def delete_transition(transition_info, attr, ui, page):
     start_name, transition = transition_info
-    
+
     if start_name in attr.transitions and transition in attr.transitions[start_name]:
         attr.transitions[start_name].remove(transition)
-        
+
         ui.status_text.value = f"Переход {start_name} → {transition['end']} удалён"
-        
+
         attr.selected_transition = None
-        
+
         from draw import draw_nodes
         draw_nodes(attr, ui)
