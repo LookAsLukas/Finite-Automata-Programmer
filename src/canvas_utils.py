@@ -21,8 +21,7 @@ def check_self_transition(click: Vector2D, transitions, nodes, state):
     taken_in = {
         (Vector2D.from_tuple(nodes[_start]) - state_p).phi()
         for _start, _trans_list in transitions.items()
-        if state in map(lambda x: x["end"], transitions[state]) and
-        state != _start
+        if state in map(lambda x: x["end"], _trans_list) and state != _start
     }
     taken = sorted(taken_in | taken_out)
 
@@ -73,7 +72,7 @@ def get_clicked_transition(x: float, y: float, nodes: Dict[str, Tuple[float, flo
                 continue
             if start == end:
                 if check_self_transition(click, transitions, nodes, start):
-                    return start, t
+                    return start, end
                 continue
             (x2, y2) = nodes[end]
 
@@ -101,6 +100,6 @@ def get_clicked_transition(x: float, y: float, nodes: Dict[str, Tuple[float, flo
             ad_len = dot_product(ab, ac) / ac.length()
             bd_len = math.sqrt(ab.length() ** 2 - ad_len ** 2)
             if bd_len <= threshold and 0 <= ad_len <= ac.length():
-                return start, t
+                return start, end
 
     return None, None

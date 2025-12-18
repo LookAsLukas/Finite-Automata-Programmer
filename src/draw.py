@@ -38,7 +38,6 @@ def draw_nodes(attr, ui):
 
 def calc_self_line(symbols, paint, point: Vector2D, taken):
     arc_radius = 25
-    print(taken)
 
     taken = sorted(taken)
     if taken == []:
@@ -163,15 +162,23 @@ def calc_line(symbols, paint, start: Vector2D, end: Vector2D, double):
     ]
 
 
-def draw_transitions(attr, ui): 
+def draw_transitions(attr, ui):
     elements = []
     for start, trans_list in attr.transitions.items():
         if start not in attr.nodes:
             continue
         (x1, y1) = attr.nodes[start]
 
-        for t in trans_list:
-            symbol = t["symbol"]
+        unique_trans_list = {
+            t["end"]: t
+            for t in trans_list
+        }.values()
+        for t in unique_trans_list:
+            symbols = ', '.join({
+                tt["symbol"]
+                for tt in trans_list
+                if tt["end"] == t["end"]
+            })
             end = t["end"]
             if end not in attr.nodes:
                 continue
@@ -180,9 +187,7 @@ def draw_transitions(attr, ui):
             start_p = Vector2D(x1, y1)
             end_p = Vector2D(x2, y2)
 
-            is_selected = attr.selected_transition and \
-                          attr.selected_transition[0] == start and \
-                          attr.selected_transition[1] == t
+            is_selected = attr.selected_transition == (start, end)
 
             line_color = Colors.BLUE_800 if is_selected else Colors.BLACK
             line_width = 3 if is_selected else 2
@@ -197,10 +202,8 @@ def draw_transitions(attr, ui):
                     for _start, _trans_list in attr.transitions.items()
                     if start in map(lambda x: x["end"], _trans_list) and start != _start
                 }
-                print(taken_out, taken_in)
-                print(attr.transitions)
                 elements += calc_self_line(
-                    symbol,
+                    symbols,
                     flet.Paint(line_color, stroke_width=line_width),
                     start_p,
                     taken_out | taken_in
@@ -214,7 +217,7 @@ def draw_transitions(attr, ui):
                     break
 
             elements += calc_line(
-                symbol,
+                symbols,
                 flet.Paint(line_color, stroke_width=line_width),
                 start_p, end_p,
                 double

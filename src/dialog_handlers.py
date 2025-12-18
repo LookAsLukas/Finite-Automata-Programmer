@@ -13,7 +13,7 @@ def rename_state_dialog(name: str, attr, ui, page):
 
         # Обновляем данные
         attr.nodes[new_name] = attr.nodes.pop(name)
-        
+
         new_transitions = {}
         for s, lst in attr.transitions.items():
             updated_s = new_name if s == name else s
@@ -50,38 +50,45 @@ def rename_state_dialog(name: str, attr, ui, page):
     return dialog
 
 
-def edit_transition_dialog(start_name, transition_data, attr, ui, page):
-    
-    old_symbol = transition_data["symbol"]
-    end_name = transition_data["end"]
+def edit_transition_dialog(start_name, end_name, attr, ui, page):
+    old_symbols = {
+        t["symbol"]
+        for t in attr.transitions[start_name]
+        if t["end"] == end_name
+    }
 
     def on_save(e):
-        new_symbol = input_field.value.strip()
-        if not new_symbol:
-            ui.status_text.value = "Символ не может быть пустым (используйте ε)!"
+        new_symbols = set(filter(lambda c: c.isalpha() or c == EPSILON_SYMBOL, input_field.value))
+        if not new_symbols:
+            ui.status_text.value = "Должен быть хотя бы один символ английского алфавита или ε"
             return
 
-        transition_data["symbol"] = new_symbol
+        attr.transitions[start_name] = list(filter(lambda t: t["end"] != end_name,
+                                                   attr.transitions[start_name]))
+        attr.transitions[start_name] += [
+            {"symbol": c, "end": end_name}
+            for c in new_symbols
+        ]
         
-        if new_symbol != EPSILON_SYMBOL:
-            attr.alphabet.add(new_symbol)
-            ui.alphabet_display.value = f"Алфавит: {', '.join(sorted(attr.alphabet))}"
+        if new_symbols != {EPSILON_SYMBOL}:
+            attr.alphabet.update(new_symbols)
+            ui.alphabet_display.value = f"Алфавит: {', '.join(attr.alphabet)}"
 
         from draw import draw_nodes
         draw_nodes(attr, ui)
         
         page.close(dialog)
-        ui.status_text.value = f"Переход из {start_name} изменён на '{new_symbol}'"
+        ui.status_text.value = f"Переход из {start_name} изменён на '{', '.join(new_symbols)}'"
         page.update()
 
     def set_epsilon(e):
-        input_field.value = EPSILON_SYMBOL
+        input_field.value += EPSILON_SYMBOL
         input_field.focus()
         page.update()
 
     input_field = TextField(
-        label="Символ перехода", 
-        value=old_symbol, 
+        label="Символы перехода", 
+        value=', '.join(old_symbols),
         width=150,
         autofocus=True,
         on_submit=on_save
