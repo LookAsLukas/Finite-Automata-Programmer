@@ -7,6 +7,13 @@ class Vector2D:
     x: float
     y: float
 
+    # Remove during big refactor
+    def from_tuple(tup):
+        return Vector2D(tup[0], tup[1])
+
+    def from_phi_r(phi, r):
+        return Vector2D(r, 0).turned(phi)
+
     def phi(self):
         return atan2(self.y, self.x)
 
@@ -43,6 +50,9 @@ class Vector2D:
         if not isinstance(scalar, (int, float)):
             raise TypeError("Vector2D true division with non-number is undefined")
         return Vector2D(self.x / scalar, self.y / scalar)
+
+    def __neg__(self):
+        return Vector2D(-self.x, -self.y)
 
 
 def dot_product(v1: Vector2D, v2: Vector2D) -> float:
