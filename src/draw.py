@@ -7,9 +7,14 @@ from linal import Vector2D, dot_product
 def draw_nodes(attr, ui):
     elements = []
     for name, (x, y) in attr.nodes.items():
-        if name == attr.start_state:
+        is_start = name == attr.start_state
+        is_final = name in attr.final_states
+        
+        if is_start and is_final:
+            color = Colors.YELLOW  
+        elif is_start:
             color = Colors.LIGHT_GREEN_300
-        elif name in attr.final_states:
+        elif is_final:
             color = Colors.PINK_200
         else:
             color = Colors.AMBER_100
@@ -112,7 +117,7 @@ def calc_self_line(symbols, paint, point: Vector2D, taken):
 
 def calc_line(symbols, paint, start: Vector2D, end: Vector2D, double):
     if start == end:
-        return calc_self_line(symbols, paint, start)
+        return calc_self_line(symbols, paint, start, [])
 
     dir = (end - start).normalized()
     line_start = start
