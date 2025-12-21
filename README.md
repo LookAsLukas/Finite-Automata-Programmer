@@ -4,6 +4,14 @@ Finite Automata Programmer (FAP) - is an IDE for DFAs, NFAs and e-NFAs. It provi
 graphical interface for building, running and debugging automata. It also has a regex-FA converter
 (and vise-versa) and a DFA minimalizer  
 ## Installation and build
+#### Note: Linux requires _zenity_ for filesystem interactions  
+```
+sudo apt install zenity
+```  
+```
+sudo pacman -S zenity
+```
+\
 For a quick ready-to-go usage just download the executable file from Releases
 
 For building it yourself:
