@@ -116,9 +116,6 @@ def calc_self_line(symbols, paint, point: Vector2D, taken):
 
 
 def calc_line(symbols, paint, start: Vector2D, end: Vector2D, double):
-    if start == end:
-        return calc_self_line(symbols, paint, start, [])
-
     dir = (end - start).normalized()
     line_start = start
     line_end = end
