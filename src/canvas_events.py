@@ -82,7 +82,7 @@ def handle_double_click(e, attr, ui, page):
         return 
     
     clicked_node = get_clicked_node(x, y, attr.nodes)
-    if clicked_node:
+    if clicked_node is not None:
         dialog = rename_state_dialog(clicked_node, attr, ui, page)
         page.open(dialog)
         return
@@ -105,7 +105,7 @@ def handle_drag_start(e, attr, ui, page):
     
     clicked_node = get_clicked_node(x, y, attr.nodes)
     
-    if clicked_node:
+    if clicked_node is not None:
         attr.dragging_node = clicked_node
         attr.selected_node = clicked_node
         ui.status_text.value = f"Перетаскивание состояния {clicked_node}"
@@ -114,7 +114,7 @@ def handle_drag_start(e, attr, ui, page):
 
 def handle_drag_update(e, attr, ui, page):
     """Обновление позиции перетаскиваемого узла"""
-    if attr.dragging_node:
+    if attr.dragging_node is not None:
         x, y = e.local_x, e.local_y
         
         x = max(30, min(attr.canvas_width - 30, x))
@@ -126,7 +126,7 @@ def handle_drag_update(e, attr, ui, page):
 
 def handle_drag_end(e, attr, ui, page):
     """Завершение перетаскивания"""
-    if attr.dragging_node:
+    if attr.dragging_node is not None:
         ui.status_text.value = f"Состояние {attr.dragging_node} перемещено"
         attr.dragging_node = None
         page.update()
