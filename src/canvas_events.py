@@ -30,10 +30,9 @@ def handle_canvas_click(e, attr, ui, page):
         return  # Клик вне канваса
     
     clicked_node = get_clicked_node(x, y, attr.nodes)
-    clicked_start, clicked_transition = get_clicked_transition(x, y, attr.nodes, attr.transitions)
+    clicked_start, clicked_end = get_clicked_transition(x, y, attr.nodes, attr.transitions)
 
-    if hasattr(attr, 'selected_transition'):
-        attr.selected_transition = None
+    attr.selected_transition = None
 
     if attr.placing_mode:
         add_node(e, attr, ui)
@@ -45,22 +44,22 @@ def handle_canvas_click(e, attr, ui, page):
             ui.transition_status.value = f"Выбрано начальное состояние: {clicked_node}"
         else:
             start = attr.first_selected_node
+            attr.first_selected_node = None
             end = clicked_node
             symbol = next(iter(attr.alphabet)) if attr.alphabet else "a"
+            if {"symbol": symbol, "end": end} in attr.transitions.get(start, []):
+                return
             attr.transitions.setdefault(start, []).append({"symbol": symbol, "end": end})
-            attr.first_selected_node = None
             ui.transition_status.value = f"Переход {start} → {end} добавлен"
         draw_nodes(attr, ui)
         page.update()
         return
 
     if not attr.placing_mode and not attr.transition_mode:
-        if clicked_transition:
-            attr.selected_transition = (clicked_start, clicked_transition)
+        if clicked_end:
+            attr.selected_transition = (clicked_start, clicked_end)
             attr.selected_node = None
-            symbol = clicked_transition["symbol"]
-            end = clicked_transition["end"]
-            ui.status_text.value = f"Выбран переход: {clicked_start} → {end} ('{symbol}')"
+            ui.status_text.value = f"Выбран переход: {clicked_start} → {clicked_end}"
         elif clicked_node is not None:
             attr.selected_node = clicked_node
             ui.status_text.value = f"Выбран узел: {clicked_node}"
@@ -87,9 +86,9 @@ def handle_double_click(e, attr, ui, page):
         page.open(dialog)
         return
 
-    start, transition = get_clicked_transition(x, y, attr.nodes, attr.transitions)
-    if transition:
-        dialog = edit_transition_dialog(start, transition, attr, ui, page)
+    start, end = get_clicked_transition(x, y, attr.nodes, attr.transitions)
+    if start:
+        dialog = edit_transition_dialog(start, end, attr, ui, page)
         page.open(dialog)
 
 

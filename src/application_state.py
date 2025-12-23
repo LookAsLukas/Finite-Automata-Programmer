@@ -20,8 +20,8 @@ class ApplicationAttributes:
     placing_mode = False
     transition_mode = False
     alphabet = set()
-    dragging_node = None  
-    selected_transition = None
+    dragging_node = None
+    selected_transition = None  # (start, end)
     regex = ""
     canvas_width = CANVAS_WIDTH
     canvas_height = CANVAS_HEIGHT
