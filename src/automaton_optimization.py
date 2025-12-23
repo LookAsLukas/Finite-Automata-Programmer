@@ -1,13 +1,14 @@
 from automata.fa.dfa import DFA
 from automata.fa.nfa import NFA
+from application_state import EPSILON_SYMBOL
 from automata_operations import import_automaton_data
 
 def get_complete_alphabet(attr):
-    symbols = {s for s in attr.alphabet if s != ""}
+    symbols = {s for s in attr.alphabet if s not in ("", EPSILON_SYMBOL)}
     for trans_list in attr.transitions.values():
         for t in trans_list:
             symbol = t["symbol"]
-            if symbol == "":
+            if symbol in ("", EPSILON_SYMBOL):
                 continue
             symbols.add(symbol)
     return symbols
@@ -35,10 +36,11 @@ def safe_build_nfa(attr, ui):
             
             if end_name not in states:
                 continue
-
-            if symbol not in nfa_transitions[start_name]:
-                nfa_transitions[start_name][symbol] = set()
-            nfa_transitions[start_name][symbol].add(end_name)
+            
+            logic_symbol = "" if symbol == EPSILON_SYMBOL else symbol
+            if logic_symbol not in nfa_transitions[start_name]:
+                nfa_transitions[start_name][logic_symbol] = set()
+            nfa_transitions[start_name][logic_symbol].add(end_name)
 
     valid_finals = {s for s in attr.final_states if s in states}
 
@@ -52,6 +54,59 @@ def safe_build_nfa(attr, ui):
         )
     except Exception as e:
         print(f"Build NFA Error: {e}")
+        return None
+
+def is_deterministic(attr):
+    for start_name, trans_list in attr.transitions.items():
+        seen = {}
+        for t in trans_list:
+            symbol = t["symbol"]
+            if symbol == EPSILON_SYMBOL:
+                return False
+            end_name = t["end"]
+            if symbol in seen and seen[symbol] != end_name:
+                return False
+            seen[symbol] = end_name
+    return True
+
+def safe_build_dfa(attr):
+    if not attr.nodes or attr.start_state is None:
+        return None
+
+    states = set(attr.nodes.keys())
+    if attr.start_state not in states:
+        return None
+
+    complete_alphabet = get_complete_alphabet(attr)
+    dfa_transitions = {s: {} for s in states}
+
+    for start_name, trans_list in attr.transitions.items():
+        if start_name not in states:
+            continue
+        for t in trans_list:
+            symbol = t["symbol"]
+            end_name = t["end"]
+            if symbol == EPSILON_SYMBOL:
+                return None
+            if end_name not in states:
+                continue
+            if symbol in dfa_transitions[start_name] and dfa_transitions[start_name][symbol] != end_name:
+                return None
+            dfa_transitions[start_name][symbol] = end_name
+
+    valid_finals = {s for s in attr.final_states if s in states}
+
+    try:
+        return DFA(
+            states=states,
+            input_symbols=complete_alphabet,
+            transitions=dfa_transitions,
+            initial_state=attr.start_state,
+            final_states=valid_finals,
+            allow_partial=True,
+        )
+    except Exception as e:
+        print(f"Build DFA Error: {e}")
         return None
 
 def ensure_dfa_complete(dfa):
@@ -111,12 +166,15 @@ def rename_states_sequentially(automaton):
             if dst in mapping:
                 new_transitions[new_src][symbol] = mapping[dst]
             
+    allow_partial = getattr(automaton, "allow_partial", False)
+
     return DFA(
         states={mapping[s] for s in automaton.states},
         input_symbols=automaton.input_symbols,
         transitions=new_transitions,
         initial_state=mapping[automaton.initial_state],
-        final_states={mapping[s] for s in automaton.final_states if s in mapping}
+        final_states={mapping[s] for s in automaton.final_states if s in mapping},
+        allow_partial=allow_partial,
     )
 
 def handle_optimize_click(e, attr, ui, page):
@@ -135,13 +193,18 @@ def handle_optimize_click(e, attr, ui, page):
             page.update()
             return
 
-        dfa_partial = DFA.from_nfa(nfa)
-        
-        dfa_complete = ensure_dfa_complete(dfa_partial)
-        
-        dfa_minimized = dfa_complete.minify()
-
-        clean_dfa = rename_states_sequentially(dfa_minimized)
+        if is_deterministic(attr):
+            dfa_partial = safe_build_dfa(attr)
+            if dfa_partial is None:
+                ui.status_text.value = "Ошибка построения DFA (проверьте переходы)"
+                page.update()
+                return
+            dfa_minimized = dfa_partial.minify()
+            clean_dfa = rename_states_sequentially(dfa_minimized)
+        else:
+            dfa_partial = DFA.from_nfa(nfa)
+            dfa_complete = ensure_dfa_complete(dfa_partial)
+            clean_dfa = rename_states_sequentially(dfa_complete)
 
         saved_regex = attr.regex
         from draw import draw_nodes
