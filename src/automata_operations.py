@@ -55,7 +55,7 @@ def build_nfa_from_ui(attr):
 
 def import_automaton_data(automaton, attr, ui):
     """
-    Импортирует данные из объекта DFA/NFA (automata-lib) в атрибуты приложения.
+    Импортирует данные из объекта DFA/NFA в атрибуты приложения.
     """
     try:
         layout_nodes, layout_state_names, layout_transitions, layout_final_states, layout_start_index, layout_alphabet = prepare_automaton_layout(automaton)
@@ -64,31 +64,34 @@ def import_automaton_data(automaton, attr, ui):
         attr.final_states.clear()
         attr.transitions.clear()
         attr.alphabet.clear()
+
+        string_names = [str(name) for name in layout_state_names]
         
         for i, (x, y) in enumerate(layout_nodes):
-            name = layout_state_names[i]
+            name = string_names[i]
             attr.nodes[name] = (x, y)
             
         attr.transitions = {}
         for start_idx, trans_list in layout_transitions.items():
-            start_name = layout_state_names[start_idx]
+            start_name = string_names[start_idx]
             attr.transitions[start_name] = []
             for t in trans_list:
-                end_name = layout_state_names[t["end"]]
-                
-                raw_symbol = t["symbol"]
-                ui_symbol = EPSILON_SYMBOL if raw_symbol == "" else raw_symbol
-                
+                end_name = string_names[t["end"]]
+                ui_symbol = EPSILON_SYMBOL if t["symbol"] == "" else t["symbol"]
                 attr.transitions[start_name].append({"symbol": ui_symbol, "end": end_name})
+
+        if layout_start_index is not None:
+            attr.start_state = string_names[layout_start_index]
+        else:
+            attr.start_state = None
+            
+        attr.final_states = {string_names[i] for i in layout_final_states}
         
-        attr.final_states = {layout_state_names[i] for i in layout_final_states}
-        attr.start_state = layout_state_names[layout_start_index] if layout_start_index is not None else None
-        
+        attr.node_counter = len(string_names)
         for s in layout_alphabet:
             if s != "":
                 attr.alphabet.add(s)
                 
-        attr.node_counter = len(layout_state_names)
         attr.placing_mode = False
         attr.transition_mode = False
         attr.selected_node = None
@@ -97,10 +100,10 @@ def import_automaton_data(automaton, attr, ui):
         ui.alphabet_display.value = f"Алфавит: {', '.join(sorted(attr.alphabet))}" if attr.alphabet else "Алфавит: ∅"
         ui.mode_status.value = "Режим размещения: выключен"
         ui.transition_status.value = "Режим переходов: выключен"
-        ui.status_text.value = "Автомат импортирован"
+        ui.status_text.value = "Автомат успешно построен"
 
         return True
     except Exception as ex:
         ui.status_text.value = f"Ошибка при импорте автомата: {ex}"
-        print(ex)
+        print(f"DEBUG ERROR: {ex}")
         return False
