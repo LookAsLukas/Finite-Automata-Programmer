@@ -1,3 +1,4 @@
+from graph import Transition, Node
 from dataclasses import dataclass
 from math import sqrt, atan2, sin, cos
 
@@ -7,12 +8,17 @@ class Vector2D:
     x: float
     y: float
 
-    # Remove during big refactor
-    def from_tuple(tup):
-        return Vector2D(tup[0], tup[1])
+    def from_node(node: Node):
+        return Vector2D(node.x, node.y)
+
+    def from_transition(transition: Transition):
+        return Vector2D.from_node(transition.end) - Vector2D.from_node(transition.start)
 
     def from_phi_r(phi, r):
         return Vector2D(r, 0).turned(phi)
+
+    def to_tuple(self):
+        return (self.x, self.y)
 
     def phi(self):
         return atan2(self.y, self.x)

@@ -1,49 +1,57 @@
 import math
-import flet
+import flet as ft
 from flet import TextStyle, canvas, Colors, FontWeight
 from linal import Vector2D, dot_product
+from fap import Application
+from graph import NodeType
+from typing import Set, List
 
 
-def draw_nodes(attr, ui):
+def draw_nodes(app: Application) -> None:
     elements = []
-    for name, (x, y) in attr.nodes.items():
-        is_start = name == attr.start_state
-        is_final = name in attr.final_states
-        
-        if is_start and is_final:
-            color = Colors.YELLOW  
-        elif is_start:
-            color = Colors.LIGHT_GREEN_300
-        elif is_final:
-            color = Colors.PINK_200
-        else:
-            color = Colors.AMBER_100
+    for node in app.graph.nodes:
+        match node.type:
+            case NodeType.START_FINAL:
+                color = app.config.start_final_node_color
+            case NodeType.START:
+                color = app.config.start_node_color
+            case NodeType.FINAL:
+                color = app.config.final_node_color
+            case _:
+                color = app.config.node_color
 
-        circle = canvas.Circle(x=x, y=y, radius=30, paint=flet.Paint(color))
+        circle = canvas.Circle(
+            x=node.x, y=node.y,
+            radius=app.config.node_radius,
+            paint=ft.Paint(color)
+        )
         elements.append(circle)
 
-        if attr.selected_node == name:
+        if app.graph.selected_node == node:
             outline = canvas.Circle(
-                x=x, y=y, radius=30,
-                paint=flet.Paint(Colors.BLUE_800, style="stroke", stroke_width=3)
+                x=node.x, y=node.y,
+                radius=app.config.node_radius,
+                paint=ft.Paint(app.config.selection_color, style="stroke", stroke_width=3)
             )
             elements.append(outline)
 
         text = canvas.Text(
-            x=x - 12, y=y - 10,
-            text=name,
-            style=TextStyle(weight=FontWeight.BOLD)
+            x=node.x, y=node.y,
+            text=node.name,
+            style=TextStyle(weight=FontWeight.BOLD),
+            alignment=ft.alignment.center
         )
         elements.append(text)
 
-    transition_elements = draw_transitions(attr, ui)
-    ui.drawing_area.shapes = elements + transition_elements
-    ui.drawing_area.update()
+    transition_elements = calc_transitions(app)
+    app.ui.drawing_area.shapes = elements + transition_elements
+    app.ui.drawing_area.update()
+    print(app.graph.nodes)
+    print(app.graph.transitions)
 
 
-def calc_self_line(symbols, paint, point: Vector2D, taken):
-    arc_radius = 25
-    print(taken)
+def calc_self_line(symbols: str, paint: ft.Paint, point: Vector2D, node_radius: float, taken: Set[float]) -> List:
+    arc_radius = 5/6 * node_radius
 
     taken = sorted(taken)
     if taken == []:
@@ -55,12 +63,12 @@ def calc_self_line(symbols, paint, point: Vector2D, taken):
 
     arc_center_dir = Vector2D.from_phi_r(taken[diffs.index(max_diff)] + max_diff / 2, 1)
     contact_offset_phi = min(math.pi / 4, max_diff / 2)
-    contact1 = point + arc_center_dir.turned(contact_offset_phi) * 30
-    contact2 = point + arc_center_dir.turned(-contact_offset_phi) * 30
+    contact1 = point + arc_center_dir.turned(contact_offset_phi) * node_radius
+    contact2 = point + arc_center_dir.turned(-contact_offset_phi) * node_radius
 
-    # arc_radius^2 = (d + (1 - cos(contact_offset_phi)) * 30)^2 + (sin(contact_offset_phi) * 30)^2
-    # d = 30 * (cos(contact_offset_phi) - 1) + sqrt(arc_radius^2 - (30 * sin(contact_offset_phi))^2)
-    center_distance = 30 * math.cos(contact_offset_phi) + math.sqrt(arc_radius ** 2 - (30 * math.sin(contact_offset_phi)) ** 2)
+    # arc_radius^2 = (d + (1 - cos(contact_offset_phi)) * node_radius)^2 + (sin(contact_offset_phi) * node_radius)^2
+    # d = node_radius * (cos(contact_offset_phi) - 1) + sqrt(arc_radius^2 - (node_radius * sin(contact_offset_phi))^2)
+    center_distance = node_radius * math.cos(contact_offset_phi) + math.sqrt(arc_radius ** 2 - (node_radius * math.sin(contact_offset_phi)) ** 2)
     arc_center = point + arc_center_dir * center_distance
 
     start_angle = (contact2 - arc_center).phi()
@@ -86,10 +94,10 @@ def calc_self_line(symbols, paint, point: Vector2D, taken):
         canvas.Arc(
             x=arc_center.x - arc_radius, y=arc_center.y - arc_radius,
             height=arc_radius * 2, width=arc_radius * 2,
-            paint=flet.Paint(
+            paint=ft.Paint(
                 paint.color,
                 stroke_width=paint.stroke_width,
-                style=flet.PaintingStyle.STROKE
+                style=ft.PaintingStyle.STROKE
             ),
             start_angle=start_angle,
             sweep_angle=sweep_angle,
@@ -109,23 +117,23 @@ def calc_self_line(symbols, paint, point: Vector2D, taken):
             x=text_position.x, y=text_position.y,
             text=symbols,
             style=TextStyle(size=18, weight=FontWeight.BOLD, color=paint.color),
-            alignment=flet.alignment.center,
+            alignment=ft.alignment.center,
             rotate=text_rotation
         )
     ]
 
 
-def calc_line(symbols, paint, start: Vector2D, end: Vector2D, double):
+def calc_line(symbols: str, paint: ft.Paint, start: Vector2D, end: Vector2D, double: bool, node_radius: float) -> List:
     dir = (end - start).normalized()
     line_start = start
     line_end = end
     if double:
         line_gap = 10
-        line_start += dir.turned(-math.asin(line_gap / 2 / 30)) * 30
-        line_end -= dir.turned(math.asin(line_gap / 2 / 30)) * 30
+        line_start += dir.turned(-math.asin(line_gap / 2 / node_radius)) * node_radius
+        line_end -= dir.turned(math.asin(line_gap / 2 / node_radius)) * node_radius
     else:
-        line_start += dir * 30
-        line_end -= dir * 30
+        line_start += dir * node_radius
+        line_end -= dir * node_radius
 
     arrow_size = 15
     arrow_left = line_end + (dir * arrow_size).turned(205 * math.pi / 180)
@@ -159,67 +167,56 @@ def calc_line(symbols, paint, start: Vector2D, end: Vector2D, double):
             x=text_position.x, y=text_position.y,
             text=symbols,
             style=TextStyle(size=18, weight=FontWeight.BOLD, color=paint.color),
-            alignment=flet.alignment.center,
+            alignment=ft.alignment.center,
             rotate=text_rotation
         )
     ]
 
 
-def draw_transitions(attr, ui): 
+def calc_transitions(app: Application) -> List:
     elements = []
-    for start, trans_list in attr.transitions.items():
-        if start not in attr.nodes:
-            continue
-        (x1, y1) = attr.nodes[start]
+    for transition in app.graph.transitions:
+        start_p = Vector2D.from_node(transition.start)
+        end_p = Vector2D.from_node(transition.end)
 
-        for t in trans_list:
-            symbol = t["symbol"]
-            end = t["end"]
-            if end not in attr.nodes:
-                continue
+        is_selected = app.graph.selected_transition == transition
+        line_color = app.config.selection_color if is_selected else Colors.BLACK
+        line_width = 3 if is_selected else 2
 
-            (x2, y2) = attr.nodes[end]
-            start_p = Vector2D(x1, y1)
-            end_p = Vector2D(x2, y2)
-
-            is_selected = attr.selected_transition and \
-                          attr.selected_transition[0] == start and \
-                          attr.selected_transition[1] == t
-
-            line_color = Colors.BLUE_800 if is_selected else Colors.BLACK
-            line_width = 3 if is_selected else 2
-            if start == end:
-                taken_out = {
-                    (Vector2D.from_tuple(attr.nodes[tt["end"]]) - start_p).phi()
-                    for tt in trans_list
-                    if start != tt["end"]
-                }
-                taken_in = {
-                    (Vector2D.from_tuple(attr.nodes[_start]) - start_p).phi()
-                    for _start, _trans_list in attr.transitions.items()
-                    if start in map(lambda x: x["end"], _trans_list) and start != _start
-                }
-                print(taken_out, taken_in)
-                print(attr.transitions)
-                elements += calc_self_line(
-                    symbol,
-                    flet.Paint(line_color, stroke_width=line_width),
-                    start_p,
-                    taken_out | taken_in
-                )
-                continue
-
-            double = False
-            for tt in attr.transitions.get(end, []):
-                if tt["end"] == start:
-                    double = True
-                    break
-
-            elements += calc_line(
-                symbol,
-                flet.Paint(line_color, stroke_width=line_width),
-                start_p, end_p,
-                double
+        if transition.start == transition.end:
+            out_phis = {
+                Vector2D.from_transition(transition_).phi()
+                for transition_ in app.graph.transitions
+                if transition_.start == transition.start and
+                transition_.end != transition.end
+            }
+            in_phis = {
+                (-Vector2D.from_transition(transition_)).phi()
+                for transition_ in app.graph.transitions
+                if transition_.end == transition.end and
+                transition_.start != transition.start
+            }
+            elements += calc_self_line(
+                transition.symbols,
+                ft.Paint(line_color, stroke_width=line_width),
+                start_p,
+                app.config.node_radius,
+                out_phis | in_phis
             )
+            continue
+
+        double = False
+        for transition_ in app.graph.transitions:
+            if transition_.end == transition.start and transition_.start == transition.end:
+                double = True
+                break
+
+        elements += calc_line(
+            transition.symbols,
+            ft.Paint(line_color, stroke_width=line_width),
+            start_p, end_p,
+            double,
+            app.config.node_radius
+        )
 
     return elements

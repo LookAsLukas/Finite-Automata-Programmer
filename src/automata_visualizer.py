@@ -1,128 +1,88 @@
 import math
-from collections.abc import Iterable
-from typing import List, Tuple, Dict, Set, Any
 import igraph as ig
+from graph import Node, Transition, Graph, NodeType
+from fap import Application
+from automata.fa.nfa import NFA
+from linal import Vector2D
 
 
-def prepare_automaton_layout(
-    automaton,
-    canvas_width: int = 700,
-    canvas_height: int = 450,
-    margin: int = 60,
-) -> Tuple[List[Tuple[float, float]], List[str], Dict[int, List[Dict[str, Any]]], Set[int], int, Set[str]]:
-    if not hasattr(automaton, "states"):
-        raise ValueError("Некорректный автомат: отсутствует поле states")
+def automaton_to_graph(automaton: NFA, app: Application) -> Graph:
+    """
+    IMPORTANT: automaton must have a fantom "" named node, that
+    points to all the start nodes via epsilon transitions
+    """
+    graph = Graph()
 
-    states = sorted(automaton.states)
-    initial_state = getattr(automaton, "initial_state", None)
+    start_nodes = {node for node in set().union(*automaton.transitions[""].values())}
 
-    if initial_state in states:
-        states.remove(initial_state)
-        states.insert(0, initial_state)
+    nodes = list(automaton.states)
+    nodes.remove("")
+    node_to_ind = {node: ind for ind, node in enumerate(nodes)}
+    transitions = [
+        (node_to_ind[start], node_to_ind[end])
+        for start in nodes
+        for end in set().union(*automaton.transitions[start].values())
+    ]
 
-    state_to_index = {state: idx for idx, state in enumerate(states)}
-    count = len(states)
-    center_x = canvas_width / 2
-    center_y = canvas_height / 2
+    igraph = ig.Graph(directed=True)
+    igraph.add_vertices(nodes)
+    igraph.add_edges(transitions)
+    try:
+        coords = graph.layout_fruchterman_reingold().coords
+    except Exception:
+        coords = [
+            Vector2D.from_phi_r(i / len(nodes) * 2 * math.pi, 1).to_tuple()
+            for i in range(len(nodes))
+        ]
 
-    def _fallback_circle_layout() -> List[Tuple[float, float]]:
-        nodes_circle = []
-        radius = max(min(canvas_width, canvas_height) / 2 - margin, 80)
-        for idx in range(count):
-            angle = 2 * math.pi * idx / count
-            x = center_x + radius * math.cos(angle)
-            y = center_y + radius * math.sin(angle)
-            nodes_circle.append((x, y))
-        return nodes_circle
+    frame_bottom_x = app.config.node_radius
+    frame_bottom_y = app.config.node_radius
+    frame_width = app.attr.canvas_width - 2 * app.config.node_radius
+    frame_height = app.attr.canvas_height - 2 * app.config.node_radius
 
-    nodes: List[Tuple[float, float]] = []
-    if count == 0:
-        nodes = []
-    elif count == 1:
-        nodes = [(center_x, center_y)]
-    else:
-        edges: List[Tuple[int, int]] = []
-        raw_transitions = getattr(automaton, "transitions", {})
-        for start_state, transition_map in raw_transitions.items():
-            if start_state not in state_to_index:
-                continue
-            for destinations in transition_map.values():
-                dest_iterable = destinations if isinstance(destinations, Iterable) and not isinstance(destinations, (str, bytes)) else [destinations]
-                for dest_state in dest_iterable:
-                    if dest_state in state_to_index:
-                        edges.append((state_to_index[start_state], state_to_index[dest_state]))
+    picture_bottom_x = min(x for x, _ in coords)
+    picture_bottom_y = min(y for _, y in coords)
+    picture_width = max(x for x, _ in coords) - picture_bottom_x
+    picture_height = max(y for _, y in coords) - picture_bottom_y
 
-        graph = ig.Graph(directed=True)
-        graph.add_vertices(states)
-        if edges:
-            graph.add_edges(edges)
+    coords = [
+        (
+            (x - picture_bottom_x) / picture_width * frame_width + frame_bottom_x,
+            (y - picture_bottom_y) / picture_height * frame_height + frame_bottom_y,
+        )
+        for x, y in coords
+    ]
 
-        try:
-            layout = graph.layout_fruchterman_reingold() if edges else graph.layout_circle()
-            coords = layout.coords
-        except Exception:
-            nodes = _fallback_circle_layout()
-            coords = []
+    nodes = [
+        Node(
+            x=x, y=y,
+            name=name
+        )
+        for name, (x, y) in zip(nodes, coords)
+    ]
+    for node in nodes:
+        if node.name in start_nodes and node.name in automaton.final_states:
+            node.type = NodeType.START_FINAL
+        elif node.name in start_nodes:
+            node.type = NodeType.START
+        elif node.name in automaton.final_states:
+            node.type = NodeType.FINAL
 
-        if coords:
-            xs = [x for x, _ in coords]
-            ys = [y for _, y in coords]
-            min_x, max_x = min(xs), max(xs)
-            min_y, max_y = min(ys), max(ys)
-            span_x = max(max_x - min_x, 1e-6)
-            span_y = max(max_y - min_y, 1e-6)
+    from automata_operations import EPSILON_SYMBOL
+    transitions = [
+        Transition(
+            start=nodes[start_ind],
+            end=nodes[end_ind],
+            symbols=''.join(
+                symbol if symbol != '' else EPSILON_SYMBOL
+                for symbol in automaton.transitions[nodes[start_ind].name]
+                if nodes[end_ind].name in automaton.transitions[nodes[start_ind].name][symbol]
+            )
+        )
+        for start_ind, end_ind in transitions
+    ]
 
-            usable_width = max(canvas_width - 2 * margin, 1)
-            usable_height = max(canvas_height - 2 * margin, 1)
-            scale = min(usable_width / span_x, usable_height / span_y)
-
-            nodes = [
-                (
-                    center_x + (x - (min_x + max_x) / 2) * scale,
-                    center_y + (y - (min_y + max_y) / 2) * scale,
-                )
-                for x, y in coords
-            ]
-
-    transitions: Dict[int, List[Dict[str, Any]]] = {}
-    raw_transitions = getattr(automaton, "transitions", {})
-
-    for start_state, transition_map in raw_transitions.items():
-        if start_state not in state_to_index:
-            continue
-        start_index = state_to_index[start_state]
-        for symbol, destinations in transition_map.items():
-            if isinstance(destinations, Iterable) and not isinstance(destinations, (str, bytes)):
-                dest_iterable = destinations
-            else:
-                dest_iterable = [destinations]
-            for dest_state in dest_iterable:
-                if dest_state not in state_to_index:
-                    continue
-                end_index = state_to_index[dest_state]
-                transitions.setdefault(start_index, []).append({"symbol": symbol, "end": end_index})
-
-    final_state_indices = {
-        state_to_index[state]
-        for state in getattr(automaton, "final_states", set())
-        if state in state_to_index
-    }
-
-    start_state_index = state_to_index.get(initial_state) if initial_state is not None else None
-    alphabet = set(getattr(automaton, "input_symbols", set()))
-
-    return nodes, states, transitions, final_state_indices, start_state_index, alphabet
-
-
-def convert_automaton_to_igraph(attr):
-    g = ig.Graph(directed=True)
-    g.add_vertices(attr.states)
-    edges = []
-    labels = []
-    for (src, symbol), dst_list in attr.transitions.items():
-        for dst in dst_list:
-            edges.append((src, dst))
-            labels.append(symbol)
-    g.add_edges(edges)
-    g.es["label"] = labels
-    return g
+    graph.nodes = set(nodes)
+    graph.transitions = set(transitions)
+    graph.node_counter = len(nodes)
+    return graph
