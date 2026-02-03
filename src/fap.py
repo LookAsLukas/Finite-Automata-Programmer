@@ -21,6 +21,7 @@ from flet import (
 from application_state import ApplicationUI, ApplicationState
 from graph import Graph
 from config import ApplicatonConfig
+import debug 
 
 
 class Application:
@@ -41,7 +42,6 @@ class Application:
         self.page.update()
 
     def build_page(self):
-        # this particular module refuses to work if I import it without 'from'
         from interaction_events import (
             handle_open_file_result,
             handle_save_file_result,
@@ -52,6 +52,43 @@ class Application:
         self.ui.save_file_picker = FilePicker(on_result=lambda e: handle_save_file_result(e, self))
         self.page.overlay.append(self.ui.open_file_picker)
         self.page.overlay.append(self.ui.save_file_picker)
+
+        # СНАЧАЛА создаем элементы интерфейса
+        self.ui.debug_step_back_btn = ElevatedButton(
+            "← Шаг назад",
+            on_click=lambda e: debug.debug_step_back(self),
+            bgcolor=Colors.AMBER_100
+        )
+        self.ui.debug_step_forward_btn = ElevatedButton(
+            "Шаг вперед →",
+            on_click=lambda e: debug.debug_step_forward(self),
+            bgcolor=Colors.GREEN_100
+        )
+        self.ui.debug_continue_btn = ElevatedButton(
+            "Продолжить",
+            on_click=lambda e: debug.debug_continue(self),
+            bgcolor=Colors.BLUE_100
+        )
+        self.ui.debug_status_text = Text(
+            "", 
+            size=12, 
+            color=Colors.BLUE_700,
+            weight="bold",
+            visible=False
+        )
+        
+        # ТОЛЬКО ПОТОМ создаем debug_panel
+        self.ui.debug_panel = Container(
+            content=Row([
+                self.ui.debug_step_back_btn,
+                self.ui.debug_step_forward_btn,
+                self.ui.debug_continue_btn
+            ], spacing=10),
+            padding=10,
+            bgcolor=Colors.GREY_200,
+            border_radius=5,
+            visible=False  # Изначально скрыт
+        )
 
         self.page.appbar = AppBar(
             bgcolor=Colors.BLUE_GREY_900,
@@ -64,7 +101,14 @@ class Application:
                 ],
             ),
             center_title=False,
-            actions=[],
+            actions=[
+                self.ui.debug_panel,  # Теперь точно не None
+                ElevatedButton(
+                    "Отладка",
+                    on_click=lambda e: debug.toggle_debug_mode(self),
+                    bgcolor=Colors.YELLOW_100
+                )
+            ],
         )
 
         return Column([
@@ -177,6 +221,7 @@ class Application:
             bgcolor=Colors.GREEN_100,
             color=Colors.GREEN_900
         )
+        
 
         return Container(
             content=Column([
@@ -217,7 +262,7 @@ class Application:
                 horizontal_alignment=CrossAxisAlignment.STRETCH,
             ),
             padding=20,
-            width=450,  # Фиксированная ширина правой панели
+            width=450, 
         )
 
 
