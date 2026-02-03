@@ -1,4 +1,4 @@
-from flet import Colors, Text, TextField, canvas
+from flet import Colors, Text, TextField, canvas, ElevatedButton, Container
 from dataclasses import dataclass, field
 from typing import Set
 
@@ -13,6 +13,12 @@ class ApplicationState:
     regex = ""
     canvas_width = 700
     canvas_height = 450
+
+    debug_mode: bool = False 
+    current_states: Set[str] = field(default_factory=set) 
+    input_string: str = ""
+    input_position: int = 0 
+    
 
 
 @dataclass
@@ -29,3 +35,9 @@ class ApplicationUI:
     
     open_file_picker = None
     save_file_picker = None
+
+    debug_step_back_btn = ElevatedButton("Назад") 
+    debug_step_forward_btn = ElevatedButton("Вперед")
+    debug_continue_btn = ElevatedButton("Продолжить")
+    debug_status_text = Text("")
+    debug_panel = Container(visible=False)

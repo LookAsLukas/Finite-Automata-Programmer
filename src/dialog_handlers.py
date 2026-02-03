@@ -110,6 +110,7 @@ def regex_input_dialog(app: Application) -> AlertDialog:
 
             if import_automaton_data(nfa, app):
                 draw_nodes(app)
+                app.ui.debug_panel.visible = False
                 app.ui.status_text.value = f"✅ Автомат построен из: {regex_str}"
             else:
                 app.ui.status_text.value = "❌ Ошибка при построении"

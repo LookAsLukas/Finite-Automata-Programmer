@@ -27,6 +27,14 @@ def draw_nodes(app: Application) -> None:
         )
         elements.append(circle)
 
+        if app.attr.debug_mode and node.name in app.attr.current_states:
+            glow = canvas.Circle(
+                x=node.x, y=node.y,
+                radius=app.config.node_radius + 5,
+                paint=ft.Paint("#ffff00", style="stroke", stroke_width=4)
+            )
+            elements.append(glow)
+
         if app.graph.selected_node == node:
             outline = canvas.Circle(
                 x=node.x, y=node.y,
