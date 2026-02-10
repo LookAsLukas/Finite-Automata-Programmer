@@ -6,25 +6,32 @@ from fap import Application
 
 def build_nfa_from_ui(app: Application) -> NFA:
     """
-    Создает объект NFA, автоматически отфильтровывая переходы
-    в удаленные/несуществующие состояния.
+    Создает объект NFA.
+    Исправлено: теперь корректно обрабатывает переходы, даже если объекты узлов
+    в transition не совпадают по ссылке с объектами в app.graph.nodes.
     """
     if app.graph.nodes == set() or app.graph.get_start_states() == set():
         return None
 
     nfa_transitions = {}
+    
     for node in app.graph.nodes:
         nfa_transitions[node.name] = {}
+    
     for transition in app.graph.transitions:
+        
+        start_name = transition.start.name
+        end_name = transition.end.name
+
+        if start_name not in nfa_transitions:
+            continue
+
         for symbol in transition.symbols:
             if symbol == EPSILON_SYMBOL:
                 symbol = ''
-            nfa_transitions[transition.start.name]\
-                .setdefault(symbol, set()).add(transition.end.name)
+            
+            nfa_transitions[start_name].setdefault(symbol, set()).add(end_name)
 
-    # automata-lib doesn't allow multiple start states, so
-    # we make a fantom start state with epsilon transitions
-    # to actual start states
     nfa_transitions[""] = {
         '': set(map(lambda node: node.name, app.graph.get_start_states()))
     }
@@ -62,7 +69,11 @@ def import_automaton_data(automaton: NFA, app: Application) -> bool:
         app.attr.placing_mode = False
         app.attr.transition_mode = False
 
-        app.ui.alphabet_display.value = f"Алфавит: {', '.join(sorted(app.attr.alphabet))}" if app.attr.alphabet else "Алфавит: ∅"
+        if app.attr.alphabet:
+            app.ui.alphabet_display.value = f"Алфавит: {', '.join(sorted(app.attr.alphabet))}"
+        else:
+            app.ui.alphabet_display.value = "Алфавит: ∅"
+            
         app.ui.mode_status.value = "Mode: Normal"
         app.ui.status_text.value = "Автомат импортирован"
 
