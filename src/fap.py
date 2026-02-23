@@ -16,6 +16,7 @@ from flet import (
     PopupMenuButton,
     PopupMenuItem,
     FilePicker,
+    IconButton,
 )
 
 from application_state import ApplicationUI, ApplicationState
@@ -39,6 +40,14 @@ class Application:
         self.page.add(self.build_page())
         import draw
         draw.draw_nodes(self)
+        self.page.update()
+
+    def copy_regex(self, e):
+        if self.attr.regex:
+            self.page.set_clipboard(self.attr.regex)
+            self.ui.status_text.value = "✅ Регулярное выражение скопировано"
+        else:
+            self.ui.status_text.value = "❌ Нет регулярного выражения для копирования"
         self.page.update()
 
     def build_page(self):
@@ -252,12 +261,17 @@ class Application:
                 Card(
                     Container(Column([
                         Text("Регулярные выражения", size=18, weight="bold"),
-                        self.ui.regex_display,
+                        Row([
+                            self.ui.regex_display,
+                            IconButton(
+                                icon=ft.Icons.COPY,
+                                tooltip="Копировать выражение",
+                                on_click=self.copy_regex,
+                            ),
+                        ], alignment=MainAxisAlignment.SPACE_BETWEEN),
                         regex_button,
-                        regex_from_automaton_button],
-                        spacing=10,
-                        horizontal_alignment=CrossAxisAlignment.STRETCH,
-                    ), padding=10)
+                        regex_from_automaton_button,
+                    ], spacing=10, horizontal_alignment=CrossAxisAlignment.STRETCH), padding=10)
                 ),
                 start_button,
                 final_button,

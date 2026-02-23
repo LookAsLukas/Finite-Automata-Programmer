@@ -2,6 +2,7 @@ from automata.fa.nfa import NFA
 from automata_visualizer import automaton_to_graph
 from application_state import EPSILON_SYMBOL
 from fap import Application
+import re
 
 EMPTY_SET_SYMBOL = "∅"
 
@@ -113,7 +114,69 @@ def nfa_to_regex_state_elimination(nfa: NFA) -> str:
             transitions[(state, eliminated_state)] = None
             transitions[(eliminated_state, state)] = None
 
-    return transitions[(new_start, new_final)] or EMPTY_SET_SYMBOL
+    result = transitions[(new_start, new_final)] or EMPTY_SET_SYMBOL
+    return simplify_regex(result)
+
+def simplify_regex(regex: str) -> str:
+    if regex in (None, "∅", "ε"):
+        return regex
+
+    # Защита от зацикливания – применяем правила, пока выражение меняется
+    prev = None
+    while prev != regex:
+        prev = regex
+
+        # 1. (a) -> a
+        regex = re.sub(r'\(([a-zA-Z0-9ε])\)', r'\1', regex)
+
+        # 2. ε* -> ε
+        regex = re.sub(r'ε\*', 'ε', regex)
+
+        # 3. (expr)* где expr уже содержит * -> убираем внешнюю звезду (например (a*)* -> a*)
+        def unwrap_star(match):
+            inner = match.group(1)
+            return inner if inner.endswith('*') else match.group(0)
+        regex = re.sub(r'\(([^()]+)\)\*', unwrap_star, regex)
+
+        # 4. ∅|a -> a, a|∅ -> a
+        regex = re.sub(r'∅\|([^()|]+)', r'\1', regex)
+        regex = re.sub(r'([^()|]+)\|∅', r'\1', regex)
+
+        # 5. aε -> a, εa -> a
+        regex = re.sub(r'([^()|ε])ε|ε([^()|ε])', r'\1\2', regex)
+
+        # 6. ((a)) -> (a) -> a 
+        while re.search(r'\(\([^()]+\)\)', regex):
+            regex = re.sub(r'\(\(([^()]+)\)\)', r'(\1)', regex)
+
+        # 7. (ε|X*) -> X*  и  ε|X* -> X*
+        pattern2 = r'(?:\(ε\|([^()|]+)\*\)|ε\|([^()|]+)\*)'
+        def replace2(match):
+            group = match.group(1) or match.group(2)
+            return f"{group}*"
+        regex = re.sub(pattern2, replace2, regex)
+
+        # 8. (ε|X(X*)) -> X* 
+        pattern1 = r'(?:\(ε\|([^()|*]+)\(\1\*\)\)|ε\|([^()|*]+)\(\2\*\))'
+        def replace1(match):
+            group = match.group(1) or match.group(2)
+            return f"{group}*"
+        regex = re.sub(pattern1, replace1, regex)
+
+        # 9. X|X -> X 
+        def dedup_alt(match):
+            a = match.group(1)
+            b = match.group(2)
+            return a if a == b else match.group(0)
+        regex = re.sub(r'\(([^()|]+)\|([^()|]+)\)', dedup_alt, regex)
+
+        # 10. (X)Y -> XY, X(Y) -> XY
+        regex = re.sub(r'\(([^()|*]+)\)([^()|*])', r'\1\2', regex)  # (X)Y
+        regex = re.sub(r'([^()|*])\(([^()|*]+)\)', r'\1\2', regex)  # X(Y)
+
+        # 11. X** -> X* 
+        regex = re.sub(r'([^()|*]+)\*\*', r'\1*', regex)
+    return regex
 
 def build_nfa_from_ui(app: Application) -> NFA:
     """
