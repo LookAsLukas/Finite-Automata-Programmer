@@ -4,6 +4,45 @@ from graph import NodeType, Graph
 from application_state import ApplicationState, ApplicationUI
 
 
+def _clamp_canvas_scale(scale: float, app: Application) -> float:
+    return max(app.attr.min_canvas_scale, min(app.attr.max_canvas_scale, scale))
+
+
+def _sync_canvas_size(app: Application) -> None:
+    app.ui.drawing_area.width = app.attr.canvas_width
+    app.ui.drawing_area.height = app.attr.canvas_height
+
+    if app.ui.canvas_container is not None:
+        app.ui.canvas_container.width = app.attr.canvas_width
+        app.ui.canvas_container.height = app.attr.canvas_height
+
+    if app.ui.canvas_scale_slider is not None:
+        app.ui.canvas_scale_slider.value = app.attr.canvas_scale * 100
+
+    app.ui.canvas_scale_text.value = f"Размер поля: {int(round(app.attr.canvas_scale * 100))}%"
+
+
+def set_canvas_scale(scale: float, app: Application) -> None:
+    app.attr.canvas_scale = _clamp_canvas_scale(scale, app)
+    app.attr.canvas_width = app.attr.base_canvas_width * app.attr.canvas_scale
+    app.attr.canvas_height = app.attr.base_canvas_height * app.attr.canvas_scale
+    _sync_canvas_size(app)
+    draw_nodes(app)
+    app.page.update()
+
+
+def set_canvas_scale_from_slider(e, app: Application) -> None:
+    set_canvas_scale(e.control.value / 100, app)
+
+
+def zoom_canvas_in(app: Application) -> None:
+    set_canvas_scale(app.attr.canvas_scale + app.attr.canvas_scale_step, app)
+
+
+def zoom_canvas_out(app: Application) -> None:
+    set_canvas_scale(app.attr.canvas_scale - app.attr.canvas_scale_step, app)
+
+
 def toggle_placing_mode(app: Application):
     app.attr.placing_mode = not app.attr.placing_mode
     if app.attr.placing_mode:
@@ -105,4 +144,3 @@ def handle_delete(app: Application):
 
     draw_nodes(app)
     app.page.update()
-

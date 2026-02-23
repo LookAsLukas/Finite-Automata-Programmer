@@ -16,6 +16,7 @@ from flet import (
     PopupMenuButton,
     PopupMenuItem,
     FilePicker,
+    Slider,
 )
 
 from application_state import ApplicationUI, ApplicationState
@@ -125,14 +126,18 @@ class Application:
     def build_canvas_side(self):
         import canvas_events
         import interaction_events
+        self.ui.drawing_area.width = self.attr.canvas_width
+        self.ui.drawing_area.height = self.attr.canvas_height
+
         canvas_container = Container(
             content=self.ui.drawing_area,
-            width=700,  # Фиксированная ширина
-            height=450,  # Фиксированная высота
+            width=self.attr.canvas_width,
+            height=self.attr.canvas_height,
             bgcolor=Colors.WHITE,
             border_radius=10,
             alignment=alignment.center,
         )
+        self.ui.canvas_container = canvas_container
 
         gesture_area = GestureDetector(
             content=canvas_container,
@@ -221,6 +226,25 @@ class Application:
             bgcolor=Colors.GREEN_100,
             color=Colors.GREEN_900
         )
+        zoom_out_button = ElevatedButton(
+            "-",
+            on_click=lambda e: edit_events.zoom_canvas_out(self),
+            width=44
+        )
+        zoom_in_button = ElevatedButton(
+            "+",
+            on_click=lambda e: edit_events.zoom_canvas_in(self),
+            width=44
+        )
+        self.ui.canvas_scale_slider = Slider(
+            min=self.attr.min_canvas_scale * 100,
+            max=self.attr.max_canvas_scale * 100,
+            value=self.attr.canvas_scale * 100,
+            divisions=int((self.attr.max_canvas_scale - self.attr.min_canvas_scale) / self.attr.canvas_scale_step),
+            on_change=lambda e: edit_events.set_canvas_scale_from_slider(e, self),
+            expand=True
+        )
+        self.ui.canvas_scale_text.value = f"Размер поля: {int(self.attr.canvas_scale * 100)}%"
         
 
         return Container(
@@ -249,6 +273,15 @@ class Application:
                         Text("Регулярные выражения", size=18, weight="bold"),
                         self.ui.regex_display,
                         regex_button],
+                        spacing=10,
+                        horizontal_alignment=CrossAxisAlignment.STRETCH,
+                    ), padding=10)
+                ),
+                Card(
+                    Container(Column([
+                        Text("Поле", size=18, weight="bold"),
+                        self.ui.canvas_scale_text,
+                        Row([zoom_out_button, self.ui.canvas_scale_slider, zoom_in_button], spacing=8)],
                         spacing=10,
                         horizontal_alignment=CrossAxisAlignment.STRETCH,
                     ), padding=10)
