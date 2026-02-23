@@ -28,6 +28,7 @@ def get_epsilon_closure(nfa, states):
 def toggle_debug_mode(app: Application):
     if app.attr.debug_mode:
         app.attr.debug_mode = False
+        app.attr.auto_playing = False 
         app.attr.current_states.clear()
         app.ui.debug_panel.visible = False
         app.ui.status_text.value = "Режим отладки выключен"
@@ -49,6 +50,7 @@ def toggle_debug_mode(app: Application):
             return
             
         app.attr.debug_mode = True
+        app.attr.auto_playing = False 
         app.attr.input_string = word
         app.attr.input_position = 0
         
@@ -61,8 +63,11 @@ def toggle_debug_mode(app: Application):
         update_debug_view(app, "Начало работы")
 
 
-def debug_step_forward(app: Application):
+def debug_step_forward(app: Application, is_auto: bool = False):
     if not app.attr.debug_mode:
+        return
+    
+    if getattr(app.attr, 'auto_playing', False) and not is_auto:
         return
     
     if app.attr.input_position >= len(app.attr.input_string):
@@ -101,6 +106,9 @@ def debug_step_forward(app: Application):
 def debug_step_back(app: Application):
     if not app.attr.debug_mode:
         return
+        
+    if getattr(app.attr, 'auto_playing', False):
+        return
     
     if app.attr.input_position <= 0:
         return
@@ -130,6 +138,33 @@ def debug_step_back(app: Application):
     prev_char = app.attr.input_string[target_pos - 1] if target_pos > 0 else "START"
     msg = f"Откат назад. Перед символом '{app.attr.input_string[target_pos]}'" if target_pos < len(app.attr.input_string) else "Откат с конца"
     update_debug_view(app, msg)
+
+
+def debug_continue(app: Application):
+
+    if not app.attr.debug_mode:
+        return
+        
+    if getattr(app.attr, 'auto_playing', False) or app.attr.input_position >= len(app.attr.input_string):
+        return
+        
+    app.attr.auto_playing = True
+    
+    try:
+        while app.attr.input_position < len(app.attr.input_string):
+            sleep(1)
+            if not app.attr.debug_mode:
+                break
+                
+            debug_step_forward(app, is_auto=True)
+            
+        if app.attr.debug_mode and app.attr.input_position >= len(app.attr.input_string):
+            sleep(1)
+            if app.attr.debug_mode:
+                check_acceptance(app)
+                
+    finally:
+        app.attr.auto_playing = False
 
 
 def update_debug_view(app: Application, message: str):
