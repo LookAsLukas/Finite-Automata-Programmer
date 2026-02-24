@@ -47,8 +47,8 @@ def automaton_to_graph(automaton: NFA, app: Application) -> Graph:
 
     coords = [
         (
-            (x - picture_bottom_x) / picture_width * frame_width + frame_bottom_x,
-            (y - picture_bottom_y) / picture_height * frame_height + frame_bottom_y,
+            (x - picture_bottom_x) / picture_width * frame_width + frame_bottom_x if picture_width else frame_width / 2 + app.config.node_radius,
+            (y - picture_bottom_y) / picture_height * frame_height + frame_bottom_y if picture_height else frame_height / 2 + app.config.node_radius,
         )
         for x, y in coords
     ]
