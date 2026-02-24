@@ -90,6 +90,10 @@ def import_automaton_from_path(file_path: str, app: Application) -> None:
 
 def request_file_open(app: Application) -> None:
     """Открывает диалог выбора файла для импорта автомата."""
+    if app.ui.open_file_picker is None:
+        app.ui.open_file_picker = FilePicker(on_result=lambda e: handle_open_file_result(e, app))
+        app.page.overlay.append(app.ui.open_file_picker)
+
     app.ui.open_file_picker.pick_files(allow_multiple=False, allowed_extensions=["json"])
 
 
@@ -111,6 +115,10 @@ def request_file_save(app: Application) -> None:
         app.ui.status_text.value = error_message
         app.page.update()
         return
+
+    if app.ui.save_file_picker is None:
+        app.ui.save_file_picker = FilePicker(on_result=lambda e: handle_save_file_result(e, app))
+        app.page.overlay.append(app.ui.save_file_picker)
 
     app.ui.save_file_picker.save_file(file_name="nfa.json", allowed_extensions=["json"])
 
