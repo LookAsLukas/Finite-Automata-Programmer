@@ -31,7 +31,11 @@ def toggle_debug_mode(app: Application):
         app.attr.auto_playing = False 
         app.attr.current_states.clear()
         app.ui.debug_panel.visible = False
+        
+        # Сбрасываем форматирование (spans) и возвращаем обычный текст
+        app.ui.status_text.spans = None
         app.ui.status_text.value = "Режим отладки выключен"
+        
         app.attr.debug_step_info = ""
         app.ui.debug_status_text.visible = False 
         draw_nodes(app)
@@ -174,19 +178,34 @@ def update_debug_view(app: Application, message: str):
         
     pos = app.attr.input_position
     total = len(app.attr.input_string)
+    word = app.attr.input_string
     
     step_info = f"Шаг {pos}/{total}. {message}. Состояния: {{{states_str}}}"
     
+    spans = []
+    
+    if pos > 0:
+        spans.append(ft.TextSpan(word[:pos], style=ft.TextStyle(size=18)))
+        
+    if pos < total:
+        spans.append(ft.TextSpan(word[pos], style=ft.TextStyle(color=Colors.RED, weight="bold", size=18)))
+        
+    if pos + 1 < total:
+        spans.append(ft.TextSpan(word[pos+1:], style=ft.TextStyle(size=18)))
+
+    app.ui.status_text.value = "" 
+    app.ui.status_text.spans = spans
+
     if pos == total:
         final_states = {node.name for node in app.graph.get_final_states()}
         is_accepted = any(s in final_states for s in app.attr.current_states)
         
         if is_accepted:
             step_info += " -> ✅ СЛОВО ПРИНЯТО"
-            app.ui.status_text.value = f"✅ Слово '{app.attr.input_string}' принято!"
+            spans.append(ft.TextSpan(" ✅", style=ft.TextStyle(size=18)))
         else:
             step_info += " -> ❌ СЛОВО ОТВЕРГНУТО"
-            app.ui.status_text.value = f"❌ Слово '{app.attr.input_string}' не принято"
+            spans.append(ft.TextSpan(" ❌", style=ft.TextStyle(size=18)))
 
     app.attr.debug_step_info = step_info
     app.ui.debug_status_text.value = step_info
