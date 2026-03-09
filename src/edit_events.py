@@ -4,6 +4,46 @@ from graph import NodeType, Graph
 from application_state import ApplicationState, ApplicationUI
 
 
+def _scale_graph_positions(app: Application, old_scale: float, new_scale: float) -> None:
+    if not app.graph.nodes:
+        return
+
+    scale_ratio = new_scale / old_scale
+    if scale_ratio == 1.0:
+        return
+
+    old_center_x = app.attr.canvas_width / 2
+    old_center_y = app.attr.canvas_height / 2
+    new_canvas_width = app.attr.base_canvas_width * new_scale
+    new_canvas_height = app.attr.base_canvas_height * new_scale
+
+    for node in app.graph.nodes:
+        node.x = old_center_x + (node.x - old_center_x) * scale_ratio
+        node.y = old_center_y + (node.y - old_center_y) * scale_ratio
+
+    min_x = min(node.x for node in app.graph.nodes)
+    max_x = max(node.x for node in app.graph.nodes)
+    min_y = min(node.y for node in app.graph.nodes)
+    max_y = max(node.y for node in app.graph.nodes)
+
+    shift_x = 0
+    if min_x < app.config.node_radius:
+        shift_x = app.config.node_radius - min_x
+    elif max_x > new_canvas_width - app.config.node_radius:
+        shift_x = (new_canvas_width - app.config.node_radius) - max_x
+
+    shift_y = 0
+    if min_y < app.config.node_radius:
+        shift_y = app.config.node_radius - min_y
+    elif max_y > new_canvas_height - app.config.node_radius:
+        shift_y = (new_canvas_height - app.config.node_radius) - max_y
+
+    if shift_x != 0 or shift_y != 0:
+        for node in app.graph.nodes:
+            node.x += shift_x
+            node.y += shift_y
+
+
 def _clamp_canvas_scale(scale: float, app: Application) -> float:
     return max(app.attr.min_canvas_scale, min(app.attr.max_canvas_scale, scale))
 
@@ -23,7 +63,11 @@ def _sync_canvas_size(app: Application) -> None:
 
 
 def set_canvas_scale(scale: float, app: Application) -> None:
-    app.attr.canvas_scale = _clamp_canvas_scale(scale, app)
+    new_canvas_scale = _clamp_canvas_scale(scale, app)
+    if new_canvas_scale != app.attr.canvas_scale:
+        _scale_graph_positions(app, app.attr.canvas_scale, new_canvas_scale)
+
+    app.attr.canvas_scale = new_canvas_scale
     app.attr.canvas_width = app.attr.base_canvas_width * app.attr.canvas_scale
     app.attr.canvas_height = app.attr.base_canvas_height * app.attr.canvas_scale
     _sync_canvas_size(app)
