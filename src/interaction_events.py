@@ -1,6 +1,9 @@
 import os
-
-from automata_operations import build_nfa_from_ui, import_automaton_data
+from automata_operations import (
+    build_nfa_from_ui,
+    import_automaton_data,
+    nfa_to_regex_state_elimination,
+)
 from automata_io import load_automaton_from_json, save_automaton_to_json
 from draw import draw_nodes
 from fap import Application
@@ -29,6 +32,26 @@ def handle_run(app: Application) -> None:
             app.ui.status_text.value = f"Слово '{word}' {'✅ принимается' if accepted else '❌ не принимается'} автоматом"
         except Exception as ex:
             app.ui.status_text.value = f"Ошибка при обработке слова: {ex}"
+    app.page.update()
+
+
+def handle_convert_to_regex(app: Application) -> None:
+    """Конвертирует текущий автомат в регулярное выражение методом исключения состояний."""
+    nfa = build_nfa_from_ui(app)
+    if nfa is None:
+        app.ui.status_text.value = "Автомат неполный — невозможно построить регулярное выражение!"
+        app.page.update()
+        return
+
+    try:
+        regex = nfa_to_regex_state_elimination(nfa)
+    except Exception as ex:
+        app.ui.status_text.value = f"Ошибка при конвертации в регулярное выражение: {ex}"
+    else:
+        app.attr.regex = regex
+        app.ui.regex_display.value = f"Регулярное выражение: {regex}"
+        app.ui.status_text.value = "✅ Регулярное выражение построено методом исключения состояний"
+
     app.page.update()
 
 
