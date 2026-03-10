@@ -65,57 +65,47 @@ def _star_regex(regex: str | None) -> str:
 
 
 def nfa_to_regex_state_elimination(nfa: NFA) -> str:
-    """Преобразует NFA в регулярное выражение методом исключения состояний."""
-    new_start = "__GNFA_START__"
-    new_final = "__GNFA_FINAL__"
-
+    """Конвертация с учетом весов состояний (кол-во входящих * кол-во исходящих переходов) для оптимизации порядка исключения."""
+    new_start, new_final = "__S__", "__F__"
     states = sorted(nfa.states, key=str)
     all_states = [new_start, *states, new_final]
-    transitions: dict[tuple[str, str], str | None] = {
-        (start, end): None
-        for start in all_states
-        for end in all_states
-    }
+    
+    trans = {(s, e): None for s in all_states for e in all_states}
+    
+    for s, s_trans in nfa.transitions.items():
+        for symb, targets in s_trans.items():
+            char = EPSILON_SYMBOL if symb == '' else symb
+            for t in targets:
+                trans[(s, t)] = _union_regex(trans[(s, t)], char)
 
-    for start, state_transitions in nfa.transitions.items():
-        for symbol, destinations in state_transitions.items():
-            regex_symbol = EPSILON_SYMBOL if symbol == '' else symbol
-            for end in destinations:
-                transitions[(start, end)] = _union_regex(transitions[(start, end)], regex_symbol)
+    trans[(new_start, nfa.initial_state)] = EPSILON_SYMBOL
+    for f in nfa.final_states:
+        trans[(f, new_final)] = _union_regex(trans[(f, new_final)], EPSILON_SYMBOL)
 
-    transitions[(new_start, nfa.initial_state)] = _union_regex(
-        transitions[(new_start, nfa.initial_state)],
-        EPSILON_SYMBOL,
-    )
-    for final_state in nfa.final_states:
-        transitions[(final_state, new_final)] = _union_regex(
-            transitions[(final_state, new_final)],
-            EPSILON_SYMBOL,
-        )
+    # Удаление по весам (In * Out)
+    def get_weight(state):
+        in_d = sum(1 for s in all_states if trans[(s, state)] and s != state)
+        out_d = sum(1 for e in all_states if trans[(state, e)] and e != state)
+        return in_d * out_d
 
-    elimination_order = sorted(nfa.states, key=str)
-    for eliminated_state in elimination_order:
-        remaining_states = [state for state in all_states if state != eliminated_state]
-        loop = transitions[(eliminated_state, eliminated_state)]
+    elimination_order = sorted(states, key=get_weight)
 
-        for start in remaining_states:
-            for end in remaining_states:
-                through_eliminated = _concat_regex(
-                    transitions[(start, eliminated_state)],
-                    _star_regex(loop),
-                    transitions[(eliminated_state, end)],
-                )
-                transitions[(start, end)] = _union_regex(
-                    transitions[(start, end)],
-                    through_eliminated,
-                )
+    for q_elim in elimination_order:
+        remaining = [s for s in all_states if s != q_elim]
+        loop = trans[(q_elim, q_elim)]
+        
+        for s in remaining:
+            if not trans[(s, q_elim)]: continue
+            for e in remaining:
+                if not trans[(q_elim, e)]: continue
+                
+                path = _concat_regex(trans[(s, q_elim)], _star_regex(loop), trans[(q_elim, e)])
+                trans[(s, e)] = _union_regex(trans[(s, e)], path)
+        
+        for s in all_states:
+            trans[(s, q_elim)] = trans[(q_elim, s)] = None
 
-        for state in all_states:
-            transitions[(state, eliminated_state)] = None
-            transitions[(eliminated_state, state)] = None
-
-    result = transitions[(new_start, new_final)] or EMPTY_SET_SYMBOL
-    return simplify_regex(result)
+    return simplify_regex(trans[(new_start, new_final)] or "∅")
 
 def simplify_regex(regex: str) -> str:
     if regex in (None, "∅", "ε"):
