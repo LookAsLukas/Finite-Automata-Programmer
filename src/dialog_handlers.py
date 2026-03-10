@@ -17,6 +17,8 @@ def rename_state_dialog(node: Node, app: Application) -> AlertDialog:
             app.page.update()
             return
 
+        app.history.add(app.graph)
+
         node.name = new_name
 
         draw_nodes(app)
@@ -38,6 +40,8 @@ def edit_transition_dialog(transition: Transition, app: Application) -> AlertDia
         if new_symbols == set():
             app.ui.status_text.value = "Символ не может быть пустым (используйте ε)!" # TODO: MAKE MORE AGGRESSIVE
             return
+
+        app.history.add(app.graph)
 
         transition.symbols = ''.join(new_symbols)
 
@@ -109,6 +113,8 @@ def regex_input_dialog(app: Application) -> AlertDialog:
             app.ui.regex_display.value = f"Регулярное выражение: {regex_str}"
 
             if import_automaton_data(nfa, app):
+                app.history.add(app.graph)
+
                 draw_nodes(app)
                 app.ui.debug_panel.visible = False
                 app.ui.status_text.value = f"✅ Автомат построен из: {regex_str}"

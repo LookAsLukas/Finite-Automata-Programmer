@@ -15,6 +15,8 @@ def add_node(x: float, y: float, app: Application) -> None:
        y < app.config.node_radius or y > app.attr.canvas_height - app.config.node_radius:
         return  # Клик слишком близко к краю
 
+    app.history.add(app.graph)
+
     name = f"q{app.graph.node_counter}"
     app.graph.nodes.add(Node(
         x=x, y=y,
@@ -41,6 +43,8 @@ def handle_canvas_click(e, app: Application) -> None:
 
     if clicked_node is not None:
         if app.graph.selected_node is not None and app.attr.transition_mode:
+            app.history.add(app.graph)
+
             if app.attr.alphabet == set():
                 app.attr.alphabet.add("a")
             symbol = next(iter(app.attr.alphabet))
@@ -120,5 +124,7 @@ def handle_drag_update(e, app: Application) -> None:
 def handle_drag_end(e, app: Application):
     """Завершение перетаскивания"""
     if app.graph.dragging_node:
+        app.history.add(app.graph)
+
         app.graph.dragging_node = None
         app.page.update()

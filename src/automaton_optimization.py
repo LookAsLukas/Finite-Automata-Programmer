@@ -23,6 +23,8 @@ def handle_optimize_click(app: Application):
 
         min_nfa = NFA.from_dfa(DFA.from_nfa(nfa).minify())
         if import_automaton_data(min_nfa, app):
+            app.history.add(app.graph)
+
             draw_nodes(app)
             app.ui.status_text.value = "Оптимизация выполнена успешно!"
         else:

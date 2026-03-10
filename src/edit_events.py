@@ -21,12 +21,12 @@ def toggle_transition_mode(app: Application):
 
 
 def toggle_start_state(app: Application):
-    if app.attr.transition_mode or app.attr.placing_mode:
-        return
     if app.graph.selected_node is None:
         app.ui.status_text.value = "Выберите узел!"
         app.page.update()
         return
+
+    app.history.add(app.graph)
 
     if app.graph.selected_node in app.graph.get_start_states():
         if app.graph.selected_node.type == NodeType.START:
@@ -44,12 +44,12 @@ def toggle_start_state(app: Application):
 
 
 def toggle_final_state(app: Application):
-    if app.attr.transition_mode or app.attr.placing_mode:
-        return
     if app.graph.selected_node is None:
         app.ui.status_text.value = "Выберите узел!"
         app.page.update()
         return
+
+    app.history.add(app.graph)
 
     if app.graph.selected_node in app.graph.get_final_states():
         if app.graph.selected_node.type == NodeType.FINAL:
@@ -79,6 +79,8 @@ def add_alphabet_symbols(app: Application):
 
 
 def clear_automaton(app: Application):
+    app.history.add(app.graph)
+
     app.graph = Graph()
     app.attr = ApplicationState()
     app.ui = ApplicationUI()
@@ -87,6 +89,9 @@ def clear_automaton(app: Application):
 
 
 def handle_delete(app: Application):
+    if app.graph.selected_node or app.graph.selected_transition:
+        app.history.add(app.graph)
+
     if app.graph.selected_node is not None:
         app.graph.nodes.remove(app.graph.selected_node)
         app.graph.transitions = {
