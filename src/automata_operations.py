@@ -1,7 +1,8 @@
+from __future__ import annotations
+
 from automata.fa.nfa import NFA
 from automata_visualizer import automaton_to_graph
 from application_state import EPSILON_SYMBOL
-from fap import Application
 import re
 
 EMPTY_SET_SYMBOL = "∅"
@@ -218,6 +219,32 @@ def import_automaton_data(automaton: NFA, app: Application) -> bool:
     Импортирует данные из объекта DFA/NFA (automata-lib) в атрибуты приложения.
     """
 
+    old_states = sorted([s for s in automaton.states if s != ""], key=str)
+    state_map = {old: f"q{i}" for i, old in enumerate(old_states)}
+    state_map[""] = ""
+
+    new_states = {state_map.get(s, str(s)) for s in automaton.states}
+    new_initial = state_map.get(automaton.initial_state, str(automaton.initial_state))
+    new_final = {state_map.get(s, str(s)) for s in automaton.final_states}
+
+    new_transitions = {}
+    for s, trans in automaton.transitions.items():
+        mapped_s = state_map.get(s, str(s))
+        new_transitions[mapped_s] = {}
+        for sym, targets in trans.items():
+            if isinstance(targets, set) or isinstance(targets, frozenset):
+                new_transitions[mapped_s][sym] = {state_map.get(t, str(t)) for t in targets}
+            else: 
+                new_transitions[mapped_s][sym] = {state_map.get(targets, str(targets))}
+
+    automaton = NFA(
+        states=new_states,
+        input_symbols=automaton.input_symbols,
+        transitions=new_transitions,
+        initial_state=new_initial,
+        final_states=new_final
+    )
+
     if automaton.initial_state != "":
         automaton = NFA(
             states=automaton.states.union({""}),
@@ -229,7 +256,7 @@ def import_automaton_data(automaton: NFA, app: Application) -> bool:
 
     try:
         app.graph = automaton_to_graph(automaton, app)
-        app.attr.alphabet = automaton.input_symbols
+        app.attr.alphabet = set(automaton.input_symbols)
         app.attr.placing_mode = False
         app.attr.transition_mode = False
 

@@ -1,7 +1,8 @@
+from __future__ import annotations
+
 import math
 import igraph as ig
 from graph import Node, Transition, Graph, NodeType
-from fap import Application
 from automata.fa.nfa import NFA
 from linal import Vector2D
 
@@ -44,6 +45,11 @@ def automaton_to_graph(automaton: NFA, app: Application) -> Graph:
     picture_bottom_y = min(y for _, y in coords)
     picture_width = max(x for x, _ in coords) - picture_bottom_x
     picture_height = max(y for _, y in coords) - picture_bottom_y
+
+    if picture_width == 0:
+        picture_width = 1
+    if picture_height == 0:
+        picture_height = 1
 
     coords = [
         (

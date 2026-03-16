@@ -1,6 +1,7 @@
+from __future__ import annotations
+
 import math
 from linal import Vector2D, dot_product
-from fap import Application
 from graph import Node, Transition
 
 

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from flet import Text, TextField, ElevatedButton, AlertDialog, Row, MainAxisAlignment
 from automata_operations import import_automaton_data
 from automata.fa.nfa import NFA
@@ -5,7 +7,6 @@ from automata.fa.dfa import DFA
 from application_state import EPSILON_SYMBOL
 from draw import draw_nodes
 from graph import Node, Transition
-from fap import Application
 
 
 

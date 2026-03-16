@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 from automata_operations import (
     build_nfa_from_ui,
@@ -6,7 +8,6 @@ from automata_operations import (
 )
 from automata_io import load_automaton_from_json, save_automaton_to_json
 from draw import draw_nodes
-from fap import Application
 from flet import FilePicker
 from automata.fa.nfa import NFA
 from automata.fa.dfa import DFA
