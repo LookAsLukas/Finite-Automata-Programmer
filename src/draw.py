@@ -57,6 +57,30 @@ def draw_nodes(app: Application) -> None:
     print(app.graph.nodes)
     print(app.graph.transitions)
 
+def is_line_intersecting_node(start: Vector2D, end: Vector2D, app: Application) -> bool:
+    v = end - start
+    length = v.length()
+    if length == 0:
+        return False
+    
+    dir_norm = v / length
+    
+    for node in app.graph.nodes:
+        p = Vector2D.from_node(node)
+        
+        if (p - start).length() < 1 or (p - end).length() < 1:
+            continue
+        
+        w = p - start
+        t = dot_product(w, dir_norm)
+        
+        if 0 < t < length:
+            dist = (w - dir_norm * t).length()
+
+            if dist < app.config.node_radius + 15:
+                return True
+                
+    return False
 
 def calc_self_line(symbols: str, paint: ft.Paint, point: Vector2D, node_radius: float, taken: Set[float]) -> List:
     arc_radius = 5/6 * node_radius
@@ -130,6 +154,55 @@ def calc_self_line(symbols: str, paint: ft.Paint, point: Vector2D, node_radius: 
         )
     ]
 
+def calc_curved_line(symbols: str, paint: ft.Paint, start: Vector2D, end: Vector2D, node_radius: float) -> list:
+    dir = (end - start).normalized()
+    perp = dir.perpendicular()
+    
+    mid = (start + end) / 2
+    control_point = mid - perp * (node_radius * 2.5) 
+    
+    start_dir = (control_point - start).normalized()
+    end_dir = (control_point - end).normalized()
+    
+    path_start = start + start_dir * node_radius
+    path_end = end + end_dir * node_radius
+
+    tangent_dir = (path_end - control_point).normalized()
+    arrow_size = 15
+    arrow_left = path_end + (tangent_dir * arrow_size).turned(205 * math.pi / 180)
+    arrow_right = path_end + (tangent_dir * arrow_size).turned(155 * math.pi / 180)
+
+    text_position = control_point - perp * 10
+    text_rotation = dir.phi() + (start.x > end.x) * math.pi
+
+    curve_paint = ft.Paint(paint.color, stroke_width=paint.stroke_width, style=ft.PaintingStyle.STROKE)
+
+    return [
+        canvas.Path(
+            elements=[
+                canvas.Path.MoveTo(path_start.x, path_start.y),
+                canvas.Path.QuadraticTo(control_point.x, control_point.y, path_end.x, path_end.y)
+            ],
+            paint=curve_paint
+        ),
+        canvas.Line(
+            x1=arrow_left.x, y1=arrow_left.y,
+            x2=path_end.x, y2=path_end.y,
+            paint=paint
+        ),
+        canvas.Line(
+            x1=arrow_right.x, y1=arrow_right.y,
+            x2=path_end.x, y2=path_end.y,
+            paint=paint
+        ),
+        canvas.Text(
+            x=text_position.x, y=text_position.y,
+            text=symbols,
+            style=TextStyle(size=18, weight=FontWeight.BOLD, color=paint.color),
+            alignment=ft.alignment.center,
+            rotate=text_rotation
+        )
+    ]
 
 def calc_line(symbols: str, paint: ft.Paint, start: Vector2D, end: Vector2D, double: bool, node_radius: float) -> List:
     dir = (end - start).normalized()
@@ -219,12 +292,20 @@ def calc_transitions(app: Application) -> List:
                 double = True
                 break
 
-        elements += calc_line(
-            transition.symbols,
-            ft.Paint(line_color, stroke_width=line_width),
-            start_p, end_p,
-            double,
-            app.config.node_radius
-        )
+        if is_line_intersecting_node(start_p, end_p, app):
+            elements += calc_curved_line(
+                transition.symbols,
+                ft.Paint(line_color, stroke_width=line_width),
+                start_p, end_p,
+                app.config.node_radius
+            )
+        else:
+            elements += calc_line(
+                transition.symbols,
+                ft.Paint(line_color, stroke_width=line_width),
+                start_p, end_p,
+                double,
+                app.config.node_radius
+            )
 
     return elements

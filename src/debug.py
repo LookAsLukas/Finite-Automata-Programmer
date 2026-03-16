@@ -32,7 +32,6 @@ def toggle_debug_mode(app: Application):
         app.attr.current_states.clear()
         app.ui.debug_panel.visible = False
         
-        # Сбрасываем форматирование (spans) и возвращаем обычный текст
         app.ui.status_text.spans = None
         app.ui.status_text.value = "Режим отладки выключен"
         
@@ -185,14 +184,13 @@ def update_debug_view(app: Application, message: str):
     spans = []
     
     if pos > 0:
-        spans.append(ft.TextSpan(word[:pos], style=ft.TextStyle(size=18)))
+        spans.append(ft.TextSpan(word[:pos], style=ft.TextStyle(size=18, color=Colors.GREY_500)))
         
     if pos < total:
         spans.append(ft.TextSpan(word[pos], style=ft.TextStyle(color=Colors.RED, weight="bold", size=18)))
         
     if pos + 1 < total:
         spans.append(ft.TextSpan(word[pos+1:], style=ft.TextStyle(size=18)))
-
     app.ui.status_text.value = "" 
     app.ui.status_text.spans = spans
 
