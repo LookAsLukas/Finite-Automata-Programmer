@@ -55,6 +55,7 @@ def open_table_editor(app):
 
     # Функция применения изменений
     def apply_changes(e):
+        app.history.add(app.graph)
         # Собираем новые переходы
         new_transitions = set()
         for state in states:

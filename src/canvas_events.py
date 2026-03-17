@@ -111,6 +111,8 @@ def handle_drag_start(e, app: Application) -> None:
     clicked_node = get_clicked_node(click, app)
 
     if clicked_node:
+        app.history.add(app.graph)
+
         app.graph.dragging_node = clicked_node
         draw_nodes(app)
         app.page.update()
@@ -133,7 +135,5 @@ def handle_drag_update(e, app: Application) -> None:
 def handle_drag_end(e, app: Application):
     """Завершение перетаскивания"""
     if app.graph.dragging_node:
-        app.history.add(app.graph)
-
         app.graph.dragging_node = None
         app.page.update()
