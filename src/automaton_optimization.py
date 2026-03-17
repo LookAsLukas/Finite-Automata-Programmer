@@ -1,8 +1,9 @@
+from __future__ import annotations
+
 from automata.fa.dfa import DFA
 from automata.fa.nfa import NFA
 from automata_operations import import_automaton_data, build_nfa_from_ui
 from draw import draw_nodes
-from fap import Application
 
 
 def handle_optimize_click(app: Application):

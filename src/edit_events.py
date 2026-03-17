@@ -1,5 +1,6 @@
+from __future__ import annotations
+
 from draw import draw_nodes
-from fap import Application
 from graph import NodeType, Graph
 from application_state import ApplicationState, ApplicationUI
 

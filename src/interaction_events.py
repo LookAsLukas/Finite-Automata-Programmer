@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 from automata_operations import (
     build_nfa_from_ui,
@@ -6,8 +8,9 @@ from automata_operations import (
 )
 from automata_io import load_automaton_from_json, save_automaton_to_json
 from draw import draw_nodes
-from fap import Application
 from flet import FilePicker
+from automata.fa.nfa import NFA
+from automata.fa.dfa import DFA
 
 
 def handle_run(app: Application) -> None:
@@ -44,7 +47,8 @@ def handle_convert_to_regex(app: Application) -> None:
         return
 
     try:
-        regex = nfa_to_regex_state_elimination(nfa)
+        clean_nfa = NFA.from_dfa(DFA.from_nfa(nfa).minify())
+        regex = nfa_to_regex_state_elimination(clean_nfa)
     except Exception as ex:
         app.ui.status_text.value = f"Ошибка при конвертации в регулярное выражение: {ex}"
     else:

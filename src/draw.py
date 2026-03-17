@@ -1,8 +1,9 @@
+from __future__ import annotations
+
 import math
 import flet as ft
 from flet import TextStyle, canvas, Colors, FontWeight
 from linal import Vector2D, dot_product
-from fap import Application
 from graph import NodeType
 from typing import Set, List
 

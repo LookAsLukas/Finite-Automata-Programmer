@@ -1,10 +1,13 @@
+from __future__ import annotations
+
 from flet import Text, TextField, ElevatedButton, AlertDialog, Row, MainAxisAlignment
 from automata_operations import import_automaton_data
 from automata.fa.nfa import NFA
+from automata.fa.dfa import DFA
 from application_state import EPSILON_SYMBOL
 from draw import draw_nodes
 from graph import Node, Transition
-from fap import Application
+
 
 
 def rename_state_dialog(node: Node, app: Application) -> AlertDialog:
@@ -87,13 +90,14 @@ def edit_transition_dialog(transition: Transition, app: Application) -> AlertDia
 def regex_input_dialog(app: Application) -> AlertDialog:
     def on_build(e):
         regex_str = input_field.value.strip()
-        if regex_str == "":
-            return
+        if not regex_str: return
+        app.page.close(dialog)
 
         app.page.close(dialog)
 
         try:
-            nfa = NFA.from_regex(regex_str)
+            raw_nfa = NFA.from_regex(regex_str)
+            optimized_nfa = NFA.from_dfa(DFA.from_nfa(raw_nfa).minify())
         except Exception as ex:
             error_dialog = AlertDialog(
                 modal=True,
@@ -107,13 +111,12 @@ def regex_input_dialog(app: Application) -> AlertDialog:
         else:
             app.attr.regex = regex_str
             app.ui.regex_display.value = f"Регулярное выражение: {regex_str}"
-
-            if import_automaton_data(nfa, app):
+            if import_automaton_data(optimized_nfa, app):
                 draw_nodes(app)
-                app.ui.debug_panel.visible = False
-                app.ui.status_text.value = f"✅ Автомат построен из: {regex_str}"
+                app.ui.status_text.value = f"Автомат построен"
+                app.page.update()
             else:
-                app.ui.status_text.value = "❌ Ошибка при построении"
+                app.ui.status_text.value = "Ошибка при построении"
 
         app.page.update()
 

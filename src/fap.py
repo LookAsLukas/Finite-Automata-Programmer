@@ -23,8 +23,8 @@ from flet import (
 from application_state import ApplicationUI, ApplicationState
 from graph import Graph
 from config import ApplicatonConfig
-import debug 
-
+import debug
+from table import open_table_editor
 
 class Application:
     graph = Graph()
@@ -240,6 +240,10 @@ class Application:
             bgcolor=Colors.GREEN_100,
             color=Colors.GREEN_900
         )
+        table_editor_button = ElevatedButton(
+            "Редактор таблицы",
+            on_click=lambda e: open_table_editor(self)
+        )
         zoom_out_button = ElevatedButton(
             "-",
             on_click=lambda e: edit_events.zoom_canvas_out(self),
@@ -272,6 +276,12 @@ class Application:
                         spacing=10,
                         horizontal_alignment=CrossAxisAlignment.STRETCH,
                     ), padding=10)
+                ),
+                Card(
+                    Container(Column([
+                        Text("Редактор", size=18, weight="bold"),
+                        table_editor_button,
+                    ], spacing=10), padding=10)
                 ),
                 Card(
                     Container(Column([
