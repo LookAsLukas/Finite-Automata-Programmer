@@ -54,8 +54,6 @@ def draw_nodes(app: Application) -> None:
     transition_elements = calc_transitions(app)
     app.ui.drawing_area.shapes = elements + transition_elements
     app.ui.drawing_area.update()
-    print(app.graph.nodes)
-    print(app.graph.transitions)
 
 
 def calc_self_line(symbols: str, paint: ft.Paint, point: Vector2D, node_radius: float, taken: Set[float]) -> List:
