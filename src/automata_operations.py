@@ -64,6 +64,7 @@ def import_automaton_data(automaton: NFA, app: Application) -> bool:
         )
 
     try:
+        app.history.add(app.graph)
         app.graph = automaton_to_graph(automaton, app)
         app.attr.alphabet = automaton.input_symbols
         app.attr.placing_mode = False
@@ -79,6 +80,7 @@ def import_automaton_data(automaton: NFA, app: Application) -> bool:
 
         return True
     except Exception as ex:
+        app.history.remove()
         app.ui.status_text.value = f"Ошибка при импорте автомата: {ex}"
         print(ex)
         return False

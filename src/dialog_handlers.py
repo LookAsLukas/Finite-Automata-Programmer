@@ -113,8 +113,6 @@ def regex_input_dialog(app: Application) -> AlertDialog:
             app.ui.regex_display.value = f"Регулярное выражение: {regex_str}"
 
             if import_automaton_data(nfa, app):
-                app.history.add(app.graph)
-
                 draw_nodes(app)
                 app.ui.debug_panel.visible = False
                 app.ui.status_text.value = f"✅ Автомат построен из: {regex_str}"
