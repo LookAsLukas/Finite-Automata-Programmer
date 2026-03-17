@@ -17,6 +17,7 @@ from flet import (
     PopupMenuItem,
     FilePicker,
     Slider,
+    IconButton,
 )
 
 from application_state import ApplicationUI, ApplicationState
@@ -40,6 +41,14 @@ class Application:
         self.page.add(self.build_page())
         import draw
         draw.draw_nodes(self)
+        self.page.update()
+
+    def copy_regex(self, e):
+        if self.attr.regex:
+            self.page.set_clipboard(self.attr.regex)
+            self.ui.status_text.value = "✅ Регулярное выражение скопировано"
+        else:
+            self.ui.status_text.value = "❌ Нет регулярного выражения для копирования"
         self.page.update()
 
     def build_page(self):
@@ -188,6 +197,7 @@ class Application:
         import edit_events
         import dialog_handlers
         import automaton_optimization
+        import interaction_events
         delete_button = ElevatedButton(
             "Удалить",
             on_click=lambda e: edit_events.handle_delete(self)
@@ -219,6 +229,10 @@ class Application:
         regex_button = ElevatedButton(
             "Построить из регулярного выражения",
             on_click=lambda e: self.page.open(dialog_handlers.regex_input_dialog(self))
+        )
+        regex_from_automaton_button = ElevatedButton(
+            "Преобразовать в регулярное выражение",
+            on_click=lambda e: interaction_events.handle_convert_to_regex(self)
         )
         optimize_button = ElevatedButton(
             "Оптимизировать (Min DFA)",
@@ -271,11 +285,17 @@ class Application:
                 Card(
                     Container(Column([
                         Text("Регулярные выражения", size=18, weight="bold"),
-                        self.ui.regex_display,
-                        regex_button],
-                        spacing=10,
-                        horizontal_alignment=CrossAxisAlignment.STRETCH,
-                    ), padding=10)
+                        Row([
+                            self.ui.regex_display,
+                            IconButton(
+                                icon=ft.Icons.COPY,
+                                tooltip="Копировать выражение",
+                                on_click=self.copy_regex,
+                            ),
+                        ], alignment=MainAxisAlignment.SPACE_BETWEEN),
+                        regex_button,
+                        regex_from_automaton_button,
+                    ], spacing=10, horizontal_alignment=CrossAxisAlignment.STRETCH), padding=10)
                 ),
                 Card(
                     Container(Column([

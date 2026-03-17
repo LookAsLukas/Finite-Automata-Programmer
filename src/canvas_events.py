@@ -3,21 +3,30 @@ from dialog_handlers import rename_state_dialog, edit_transition_dialog
 from draw import draw_nodes
 from fap import Application
 from graph import Node, Transition
+from linal import Vector2D
 
 
-def add_node(x: float, y: float, app: Application) -> None:
+def _event_point(e) -> Vector2D:
+    return Vector2D(e.local_x, e.local_y)
+
+
+def _is_inside_canvas(point: Vector2D, app: Application) -> bool:
+    return 0 <= point.x <= app.attr.canvas_width and 0 <= point.y <= app.attr.canvas_height
+
+
+def add_node(click: Vector2D, app: Application) -> None:
     """Добавляет узел в позиции клика"""
     if not app.attr.placing_mode:
         return
 
     # Проверяем, что клик внутри канваса (с учетом границ для узла)
-    if x < app.config.node_radius or x > app.attr.canvas_width - app.config.node_radius or \
-       y < app.config.node_radius or y > app.attr.canvas_height - app.config.node_radius:
+    if click.x < app.config.node_radius or click.x > app.attr.canvas_width - app.config.node_radius or \
+       click.y < app.config.node_radius or click.y > app.attr.canvas_height - app.config.node_radius:
         return  # Клик слишком близко к краю
 
     name = f"q{app.graph.node_counter}"
     app.graph.nodes.add(Node(
-        x=x, y=y,
+        x=click.x, y=click.y,
         name=name
     ))
     app.graph.node_counter += 1
@@ -26,17 +35,17 @@ def add_node(x: float, y: float, app: Application) -> None:
 
 def handle_canvas_click(e, app: Application) -> None:
     """Обрабатывает одиночный клик на canvas"""
-    x, y = e.local_x, e.local_y
+    click = _event_point(e)
 
     # Проверяем, что клик внутри области канваса
-    if x < 0 or x > app.attr.canvas_width or y < 0 or y > app.attr.canvas_height:
+    if not _is_inside_canvas(click, app):
         return  # Клик вне канваса
 
-    clicked_node = get_clicked_node(x, y, app)
-    clicked_transition = get_clicked_transition(x, y, app)
+    clicked_node = get_clicked_node(click, app)
+    clicked_transition = get_clicked_transition(click, app)
 
     if app.attr.placing_mode:
-        add_node(x, y, app)
+        add_node(click, app)
         return
 
     if clicked_node is not None:
@@ -68,18 +77,18 @@ def handle_double_click(e, app: Application) -> None:
     if app.attr.placing_mode or app.attr.transition_mode:
         return
 
-    x, y = e.local_x, e.local_y
+    click = _event_point(e)
 
-    if x < 0 or x > app.attr.canvas_width or y < 0 or y > app.attr.canvas_height:
+    if not _is_inside_canvas(click, app):
         return
 
-    clicked_node = get_clicked_node(x, y, app)
+    clicked_node = get_clicked_node(click, app)
     if clicked_node is not None:
         dialog = rename_state_dialog(clicked_node, app)
         app.page.open(dialog)
         return
 
-    clicked_transition = get_clicked_transition(x, y, app)
+    clicked_transition = get_clicked_transition(click, app)
     if clicked_transition is not None:
         dialog = edit_transition_dialog(clicked_transition, app)
         app.page.open(dialog)
@@ -90,12 +99,12 @@ def handle_drag_start(e, app: Application) -> None:
     if app.attr.placing_mode or app.attr.transition_mode:
         return
 
-    x, y = e.local_x, e.local_y
+    click = _event_point(e)
 
-    if x < 0 or x > app.attr.canvas_width or y < 0 or y > app.attr.canvas_height:
+    if not _is_inside_canvas(click, app):
         return
 
-    clicked_node = get_clicked_node(x, y, app)
+    clicked_node = get_clicked_node(click, app)
 
     if clicked_node:
         app.graph.dragging_node = clicked_node
@@ -106,10 +115,10 @@ def handle_drag_start(e, app: Application) -> None:
 def handle_drag_update(e, app: Application) -> None:
     """Обновление позиции перетаскиваемого узла"""
     if app.graph.dragging_node:
-        x, y = e.local_x, e.local_y
+        click = _event_point(e)
 
-        x = max(app.config.node_radius, min(app.attr.canvas_width - app.config.node_radius, x))
-        y = max(app.config.node_radius, min(app.attr.canvas_height - app.config.node_radius, y))
+        x = max(app.config.node_radius, min(app.attr.canvas_width - app.config.node_radius, click.x))
+        y = max(app.config.node_radius, min(app.attr.canvas_height - app.config.node_radius, click.y))
 
         app.graph.dragging_node.x = x
         app.graph.dragging_node.y = y
