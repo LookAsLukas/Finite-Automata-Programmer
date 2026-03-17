@@ -4,10 +4,12 @@ from fap import Application
 from graph import Node, Transition
 
 
-def get_clicked_node(x: float, y: float, app: Application) -> Node:
+def get_clicked_node(click: Vector2D, app: Application) -> Node:
     """Определяет, по какому узлу кликнули."""
+    radius_sq = app.config.node_radius ** 2
     for node in app.graph.nodes:
-        if (Vector2D.from_node(node) - Vector2D(x, y)).length() <= app.config.node_radius:
+        delta = Vector2D.from_node(node) - click
+        if delta.x ** 2 + delta.y ** 2 <= radius_sq:
             return node
     return None
 
@@ -60,10 +62,10 @@ def check_self_transition(click: Vector2D, transition: Transition, app: Applicat
            abs(click_d - arc_radius) <= threshold
 
 
-def get_clicked_transition(x: float, y: float, app: Application) -> Transition:
+def get_clicked_transition(click: Vector2D, app: Application) -> Transition:
     """Определяет, по какому переходу кликнули."""
     threshold = 5
-    click = Vector2D(x, y)
+    threshold_sq = threshold ** 2
     for transition in app.graph.transitions:
         if transition.start == transition.end:
             if check_self_transition(click, transition, app):
@@ -90,12 +92,20 @@ def get_clicked_transition(x: float, y: float, app: Application) -> Transition:
             end_p -= dir * app.config.node_radius
 
         # Let's call start point A, click point B,
-        # End point C and distance point D
+        # End point C and projection point D
         ab = click - start_p
         ac = end_p - start_p
-        ad_len = dot_product(ab, ac) / ac.length()
-        bd_len = math.sqrt(ab.length() ** 2 - ad_len ** 2)
-        if bd_len <= threshold and 0 <= ad_len <= ac.length():
+        ac_len_sq = ac.x ** 2 + ac.y ** 2
+        if ac_len_sq == 0:
+            continue
+
+        proj_ratio = dot_product(ab, ac) / ac_len_sq
+        if not (0 <= proj_ratio <= 1):
+            continue
+
+        closest = start_p + ac * proj_ratio
+        diff = click - closest
+        if diff.x ** 2 + diff.y ** 2 <= threshold_sq:
             return transition
 
     return None
