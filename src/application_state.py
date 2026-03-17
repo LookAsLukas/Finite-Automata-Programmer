@@ -1,4 +1,4 @@
-from flet import Colors, Text, TextField, canvas, ElevatedButton, Container
+from flet import Colors, Text, TextField, canvas, ElevatedButton, Container, Slider
 from dataclasses import dataclass, field
 from typing import Set
 
@@ -10,9 +10,15 @@ class ApplicationState:
     placing_mode: bool = False
     transition_mode: bool = False
     alphabet: Set[str] = field(default_factory=set)
-    regex = ""
-    canvas_width = 700
-    canvas_height = 450
+    regex: str = ""
+    base_canvas_width: float = 700
+    base_canvas_height: float = 450
+    canvas_width: float = 700
+    canvas_height: float = 450
+    canvas_scale: float = 1.0
+    min_canvas_scale: float = 0.5
+    max_canvas_scale: float = 2.0
+    canvas_scale_step: float = 0.1
 
     debug_mode: bool = False 
     current_states: Set[str] = field(default_factory=set) 
@@ -41,3 +47,7 @@ class ApplicationUI:
     debug_continue_btn = ElevatedButton("Продолжить")
     debug_status_text = Text("")
     debug_panel = Container(visible=False)
+
+    canvas_container = None
+    canvas_scale_text = Text("Размер поля: 100%", size=14)
+    canvas_scale_slider = Slider(min=50, max=200, value=100, divisions=30)
