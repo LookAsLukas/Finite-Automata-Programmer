@@ -1,10 +1,16 @@
-import os
+from __future__ import annotations
 
-from automata_operations import build_nfa_from_ui, import_automaton_data
+import os
+from automata_operations import (
+    build_nfa_from_ui,
+    import_automaton_data,
+    nfa_to_regex_state_elimination,
+)
 from automata_io import load_automaton_from_json, save_automaton_to_json
 from draw import draw_nodes
-from fap import Application
 from flet import FilePicker
+from automata.fa.nfa import NFA
+from automata.fa.dfa import DFA
 
 
 def handle_run(app: Application) -> None:
@@ -29,6 +35,27 @@ def handle_run(app: Application) -> None:
             app.ui.status_text.value = f"Слово '{word}' {'✅ принимается' if accepted else '❌ не принимается'} автоматом"
         except Exception as ex:
             app.ui.status_text.value = f"Ошибка при обработке слова: {ex}"
+    app.page.update()
+
+
+def handle_convert_to_regex(app: Application) -> None:
+    """Конвертирует текущий автомат в регулярное выражение методом исключения состояний."""
+    nfa = build_nfa_from_ui(app)
+    if nfa is None:
+        app.ui.status_text.value = "Автомат неполный — невозможно построить регулярное выражение!"
+        app.page.update()
+        return
+
+    try:
+        clean_nfa = NFA.from_dfa(DFA.from_nfa(nfa).minify())
+        regex = nfa_to_regex_state_elimination(clean_nfa)
+    except Exception as ex:
+        app.ui.status_text.value = f"Ошибка при конвертации в регулярное выражение: {ex}"
+    else:
+        app.attr.regex = regex
+        app.ui.regex_display.value = f"Регулярное выражение: {regex}"
+        app.ui.status_text.value = "✅ Регулярное выражение построено методом исключения состояний"
+
     app.page.update()
 
 
@@ -90,6 +117,10 @@ def import_automaton_from_path(file_path: str, app: Application) -> None:
 
 def request_file_open(app: Application) -> None:
     """Открывает диалог выбора файла для импорта автомата."""
+    if app.ui.open_file_picker is None:
+        app.ui.open_file_picker = FilePicker(on_result=lambda e: handle_open_file_result(e, app))
+        app.page.overlay.append(app.ui.open_file_picker)
+
     app.ui.open_file_picker.pick_files(allow_multiple=False, allowed_extensions=["json"])
 
 
@@ -111,6 +142,10 @@ def request_file_save(app: Application) -> None:
         app.ui.status_text.value = error_message
         app.page.update()
         return
+
+    if app.ui.save_file_picker is None:
+        app.ui.save_file_picker = FilePicker(on_result=lambda e: handle_save_file_result(e, app))
+        app.page.overlay.append(app.ui.save_file_picker)
 
     app.ui.save_file_picker.save_file(file_name="nfa.json", allowed_extensions=["json"])
 

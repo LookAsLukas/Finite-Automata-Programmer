@@ -15,14 +15,16 @@ from flet import (
     PopupMenuButton,
     PopupMenuItem,
     FilePicker,
+    Slider,
+    IconButton,
 )
 
 from application_state import ApplicationUI, ApplicationState
 from graph import Graph
 from config import ApplicatonConfig
 from graph_history import History
+from table import open_table_editor
 import debug
-
 
 class Application:
     graph = Graph()
@@ -40,6 +42,14 @@ class Application:
         self.page.add(self.build_page())
         import draw
         draw.draw_nodes(self)
+        self.page.update()
+
+    def copy_regex(self, e):
+        if self.attr.regex:
+            self.page.set_clipboard(self.attr.regex)
+            self.ui.status_text.value = "✅ Регулярное выражение скопировано"
+        else:
+            self.ui.status_text.value = "❌ Нет регулярного выражения для копирования"
         self.page.update()
 
     def build_page(self):
@@ -134,14 +144,18 @@ class Application:
     def build_canvas_side(self):
         import canvas_events
         import interaction_events
+        self.ui.drawing_area.width = self.attr.canvas_width
+        self.ui.drawing_area.height = self.attr.canvas_height
+
         canvas_container = Container(
             content=self.ui.drawing_area,
-            width=700,  # Фиксированная ширина
-            height=450,  # Фиксированная высота
+            width=self.attr.canvas_width,
+            height=self.attr.canvas_height,
             bgcolor=Colors.WHITE,
             border_radius=10,
             alignment=alignment.center,
         )
+        self.ui.canvas_container = canvas_container
 
         gesture_area = GestureDetector(
             content=canvas_container,
@@ -192,6 +206,7 @@ class Application:
         import edit_events
         import dialog_handlers
         import automaton_optimization
+        import interaction_events
         delete_button = ElevatedButton(
             "Удалить",
             on_click=lambda e: edit_events.handle_delete(self)
@@ -224,12 +239,39 @@ class Application:
             "Построить из регулярного выражения",
             on_click=lambda e: self.page.open(dialog_handlers.regex_input_dialog(self))
         )
+        regex_from_automaton_button = ElevatedButton(
+            "Преобразовать в регулярное выражение",
+            on_click=lambda e: interaction_events.handle_convert_to_regex(self)
+        )
         optimize_button = ElevatedButton(
             "Оптимизировать (Min DFA)",
             on_click=lambda e: automaton_optimization.handle_optimize_click(self),
             bgcolor=Colors.GREEN_100,
             color=Colors.GREEN_900
         )
+        table_editor_button = ElevatedButton(
+            "Редактор таблицы",
+            on_click=lambda e: open_table_editor(self)
+        )
+        zoom_out_button = ElevatedButton(
+            "-",
+            on_click=lambda e: edit_events.zoom_canvas_out(self),
+            width=44
+        )
+        zoom_in_button = ElevatedButton(
+            "+",
+            on_click=lambda e: edit_events.zoom_canvas_in(self),
+            width=44
+        )
+        self.ui.canvas_scale_slider = Slider(
+            min=self.attr.min_canvas_scale * 100,
+            max=self.attr.max_canvas_scale * 100,
+            value=self.attr.canvas_scale * 100,
+            divisions=int((self.attr.max_canvas_scale - self.attr.min_canvas_scale) / self.attr.canvas_scale_step),
+            on_change=lambda e: edit_events.set_canvas_scale_from_slider(e, self),
+            expand=True
+        )
+        self.ui.canvas_scale_text.value = f"Размер поля: {int(self.attr.canvas_scale * 100)}%"
         
 
         return Container(
@@ -246,6 +288,12 @@ class Application:
                 ),
                 Card(
                     Container(Column([
+                        Text("Редактор", size=18, weight="bold"),
+                        table_editor_button,
+                    ], spacing=10), padding=10)
+                ),
+                Card(
+                    Container(Column([
                         Text("Алфавит", size=18, weight="bold"),
                         Row([self.ui.alphabet_input, add_alphabet_button], spacing=10),
                         self.ui.alphabet_display],
@@ -256,8 +304,23 @@ class Application:
                 Card(
                     Container(Column([
                         Text("Регулярные выражения", size=18, weight="bold"),
-                        self.ui.regex_display,
-                        regex_button],
+                        Row([
+                            self.ui.regex_display,
+                            IconButton(
+                                icon=ft.Icons.COPY,
+                                tooltip="Копировать выражение",
+                                on_click=self.copy_regex,
+                            ),
+                        ], alignment=MainAxisAlignment.SPACE_BETWEEN),
+                        regex_button,
+                        regex_from_automaton_button,
+                    ], spacing=10, horizontal_alignment=CrossAxisAlignment.STRETCH), padding=10)
+                ),
+                Card(
+                    Container(Column([
+                        Text("Поле", size=18, weight="bold"),
+                        self.ui.canvas_scale_text,
+                        Row([zoom_out_button, self.ui.canvas_scale_slider, zoom_in_button], spacing=8)],
                         spacing=10,
                         horizontal_alignment=CrossAxisAlignment.STRETCH,
                     ), padding=10)
