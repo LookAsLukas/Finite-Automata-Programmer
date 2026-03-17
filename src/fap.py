@@ -1,6 +1,5 @@
 import flet as ft
 from flet import (
-    Page,
     Text,
     AppBar,
     ElevatedButton,
@@ -23,14 +22,16 @@ from flet import (
 from application_state import ApplicationUI, ApplicationState
 from graph import Graph
 from config import ApplicatonConfig
-import debug
+from graph_history import History
 from table import open_table_editor
+import debug
 
 class Application:
     graph = Graph()
     attr = ApplicationState()
     ui = ApplicationUI()
     config = ApplicatonConfig()
+    history = History()
     page: ft.Page
 
     def __init__(self, page: ft.Page):
@@ -80,13 +81,13 @@ class Application:
             bgcolor=Colors.BLUE_100
         )
         self.ui.debug_status_text = Text(
-            "", 
-            size=12, 
+            "",
+            size=12,
             color=Colors.BLUE_700,
             weight="bold",
             visible=False
         )
-        
+
         # ТОЛЬКО ПОТОМ создаем debug_panel
         self.ui.debug_panel = Container(
             content=Row([
@@ -103,13 +104,21 @@ class Application:
         self.page.appbar = AppBar(
             bgcolor=Colors.BLUE_GREY_900,
             toolbar_height=48,
-            title=PopupMenuButton(
-                content=Text("Файл", color=Colors.WHITE, weight="bold"),
-                items=[
-                    PopupMenuItem(text="Открыть файл", on_click=lambda e: request_file_open(self)),
-                    PopupMenuItem(text="Сохранить файл", on_click=lambda e: request_file_save(self)),
-                ],
-            ),
+            title=Row([
+                PopupMenuButton(
+                    content=Text("Файл", color=Colors.WHITE, weight="bold"),
+                    items=[
+                        PopupMenuItem(text="Открыть файл", on_click=lambda e: request_file_open(self)),
+                        PopupMenuItem(text="Сохранить файл", on_click=lambda e: request_file_save(self)),
+                    ],),
+                ElevatedButton(
+                    "Undo",
+                    on_click=lambda e: self.history.undo_click(self)
+                ),
+                ElevatedButton(
+                    "Redo",
+                    on_click=lambda e: self.history.redo_click(self)
+                )]),
             center_title=False,
             actions=[
                 self.ui.debug_panel,  # Теперь точно не None
