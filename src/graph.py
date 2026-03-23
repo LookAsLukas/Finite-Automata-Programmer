@@ -10,7 +10,8 @@ class NodeType(Enum):
     START_FINAL = 3
 
 
-@dataclass(unsafe_hash=True)
+# Nodes and transitions are mutable and live inside sets, so they must keep identity semantics.
+@dataclass(eq=False)
 class Node:
     x: float
     y: float
@@ -18,7 +19,7 @@ class Node:
     type: NodeType = NodeType.NORMAL
 
 
-@dataclass(unsafe_hash=True)
+@dataclass(eq=False)
 class Transition:
     start: Node
     end: Node
