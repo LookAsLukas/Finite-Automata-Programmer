@@ -6,15 +6,10 @@ from application_state import EPSILON_SYMBOL
 def open_table_editor(app):
     for node in app.graph.nodes: 
         node.name = str(node.name) 
-    nfa = build_nfa_from_ui(app)
-    if nfa is None:
-        app.ui.status_text.value = "Не удалось построить NFA (нет начальных состояний?)"
-        app.page.update()
-        return
 
-    states = sorted([s for s in nfa.states if s != ""], key=str)
+    states = sorted([nd.name for nd in app.graph.nodes if nd.name != ""], key=str)
     symbols = sorted(app.attr.alphabet)
-    has_epsilon = any('' in nfa.transitions.get(s, {}) for s in states)
+    has_epsilon = any('' == tr.symbols for tr in app.graph.transitions)
     if has_epsilon:
         symbols.append(EPSILON_SYMBOL)
 
@@ -28,7 +23,9 @@ def open_table_editor(app):
             cells = [ft.DataCell(ft.Text(state))]
             for sym in symbols:
                 nfa_sym = '' if sym == EPSILON_SYMBOL else sym
-                targets = nfa.transitions.get(state, {}).get(nfa_sym, set())
+                targets = map(lambda x: x.end.name,
+                              filter(lambda x: x.start.name == state and (nfa_sym in x.symbols or nfa_sym == x.symbols),
+                                     app.graph.transitions))
                 existing_val = cell_fields.get((state, sym)).value if (state, sym) in cell_fields else ', '.join(str(t) for t in sorted(targets, key=str))
                 tf = ft.TextField(
                     value=existing_val,

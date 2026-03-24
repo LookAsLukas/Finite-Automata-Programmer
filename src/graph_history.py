@@ -18,12 +18,8 @@ class History:
             self.graph_buffer = self.graph_buffer[1:]
         self.temp_stash = []
         self.graph_buffer.append(deepcopy(action))
-        print(self.graph_buffer)
-        print(self.temp_stash)
 
     def undo_click(self, app):
-        print(self.graph_buffer)
-        print(self.temp_stash)
         if len(self.graph_buffer) == 0:
             return
 
@@ -31,13 +27,8 @@ class History:
         app.graph = self.graph_buffer.pop()
         from draw import draw_nodes
         draw_nodes(app)
-        print("LOL", app.graph)
-        print(self.graph_buffer)
-        print(self.temp_stash)
 
     def redo_click(self, app):
-        print(self.graph_buffer)
-        print(self.temp_stash)
         if len(self.temp_stash) == 0:
             return
 
@@ -45,5 +36,3 @@ class History:
         app.graph = self.temp_stash.pop()
         from draw import draw_nodes
         draw_nodes(app)
-        print(self.graph_buffer)
-        print(self.temp_stash)
