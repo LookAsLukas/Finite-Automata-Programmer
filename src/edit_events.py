@@ -175,7 +175,7 @@ def remove_alphabet_symbols(app: Application):
 
 
 def clear_automaton(app: Application):
-    from flet import Colors, ElevatedButton
+    from flet import Colors, ElevatedButton, Container, Row
     import debug
     app.history.add(app.graph)
 
@@ -200,6 +200,17 @@ def clear_automaton(app: Application):
         "Продолжить",
         on_click=lambda e: debug.debug_continue(app),
         bgcolor=Colors.BLUE_100
+    )
+    app.ui.debug_panel = Container(
+        content=Row([
+            app.ui.debug_step_back_btn,
+            app.ui.debug_step_forward_btn,
+            app.ui.debug_continue_btn
+        ], spacing=10),
+        padding=10,
+        bgcolor=Colors.GREY_200,
+        border_radius=5,
+        visible=False  # Изначально скрыт
     )
     draw_nodes(app)
     app.page.update()
