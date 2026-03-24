@@ -9,7 +9,6 @@ from flet import (
     Colors,
     alignment,
     CrossAxisAlignment,
-    Card,
     MainAxisAlignment,
     GestureDetector,
     PopupMenuButton,
@@ -47,9 +46,9 @@ class Application:
     def copy_regex(self, e):
         if self.attr.regex:
             self.page.set_clipboard(self.attr.regex)
-            self.ui.status_text.value = "✅ Регулярное выражение скопировано"
+            self.ui.status_text.value = "Регулярное выражение скопировано"
         else:
-            self.ui.status_text.value = "❌ Нет регулярного выражения для копирования"
+            self.ui.status_text.value = "Нет регулярного выражения для копирования"
         self.page.update()
 
     def build_page(self):
@@ -64,7 +63,6 @@ class Application:
         self.page.overlay.append(self.ui.open_file_picker)
         self.page.overlay.append(self.ui.save_file_picker)
 
-        # СНАЧАЛА создаем элементы интерфейса
         self.ui.debug_step_back_btn = ElevatedButton(
             "← Шаг назад",
             on_click=lambda e: debug.debug_step_back(self),
@@ -169,37 +167,42 @@ class Application:
         input_row = Row([
             Container(
                 content=self.ui.word_input,
-                expand=True,  # Занимает всё доступное пространство
+                expand=True,
             ),
             ElevatedButton("Обработать слово", on_click=lambda e: interaction_events.handle_run(self))],
             spacing=10,
-            expand=True,  # Row тоже расширяется
             vertical_alignment=CrossAxisAlignment.CENTER,
+        )
+
+        top_content = Column([
+            Text("Визуальный автомат (NFA)", size=24, weight="bold"),
+            Container(
+                content=gesture_area,
+                alignment=alignment.center,
+            ),
+            Column([
+                self.ui.mode_status,
+                self.ui.status_text],
+                spacing=5
+            )],
+            spacing=15,
+            horizontal_alignment=CrossAxisAlignment.CENTER,
         )
 
         return Container(
             expand=True,
             content=Column([
-                Text("Визуальный автомат (NFA)", size=24, weight="bold"),
                 Container(
-                    content=gesture_area,
-                    alignment=alignment.center,
+                    content=top_content,
+                    alignment=alignment.top_center,
                 ),
-                Column([
-                    self.ui.mode_status,
-                    self.ui.status_text],
-                    spacing=5
-                ),
-                Container(
-                    content=input_row,
-                    expand=True,  # Контейнер тоже расширяется
-                )],
-                spacing=15,
-                horizontal_alignment=CrossAxisAlignment.CENTER,
+                Container(expand=True),
+                input_row],
+                spacing=0,
+                horizontal_alignment=CrossAxisAlignment.STRETCH,
                 expand=True,
             ),
             padding=20,
-            alignment=alignment.center,
         )
 
     def build_control_side(self):
@@ -207,6 +210,25 @@ class Application:
         import dialog_handlers
         import automaton_optimization
         import interaction_events
+
+        def build_sidebar_section(title, controls, show_divider=True):
+            content_controls = []
+            if title:
+                content_controls.append(Text(title, size=18, weight="bold"))
+            content_controls.extend(controls)
+
+            return Container(
+                content=Column(
+                    content_controls,
+                    spacing=10,
+                    horizontal_alignment=CrossAxisAlignment.STRETCH,
+                ),
+                padding=16,
+                border=ft.border.only(
+                    bottom=ft.border.BorderSide(1, Colors.BLUE_GREY_100)
+                ) if show_divider else None,
+            )
+
         delete_button = ElevatedButton(
             "Удалить",
             on_click=lambda e: edit_events.handle_delete(self)
@@ -271,70 +293,51 @@ class Application:
             on_change=lambda e: edit_events.set_canvas_scale_from_slider(e, self),
             expand=True
         )
-        self.ui.canvas_scale_text.value = f"Размер поля: {int(self.attr.canvas_scale * 100)}%"
-        
+        self.ui.canvas_scale_text.value = f"{int(self.attr.canvas_scale * 100)}%"
 
         return Container(
             content=Column([
-                Card(
-                    Container(Column([
-                        Text("Режимы", size=18, weight="bold"),
-                        place_mode_button,
-                        transition_mode_button,
-                        delete_button],
-                        spacing=10,
-                        horizontal_alignment=CrossAxisAlignment.STRETCH,
-                    ), padding=10)
-                ),
-                Card(
-                    Container(Column([
-                        Text("Редактор", size=18, weight="bold"),
-                        table_editor_button,
-                    ], spacing=10), padding=10)
-                ),
-                Card(
-                    Container(Column([
-                        Text("Алфавит", size=18, weight="bold"),
-                        Row([self.ui.alphabet_input, add_alphabet_button], spacing=10),
-                        self.ui.alphabet_display],
-                        spacing=10,
-                        horizontal_alignment=CrossAxisAlignment.STRETCH,
-                    ), padding=10)
-                ),
-                Card(
-                    Container(Column([
-                        Text("Регулярные выражения", size=18, weight="bold"),
-                        Row([
-                            self.ui.regex_display,
-                            IconButton(
-                                icon=ft.Icons.COPY,
-                                tooltip="Копировать выражение",
-                                on_click=self.copy_regex,
-                            ),
-                        ], alignment=MainAxisAlignment.SPACE_BETWEEN),
-                        regex_button,
-                        regex_from_automaton_button,
-                    ], spacing=10, horizontal_alignment=CrossAxisAlignment.STRETCH), padding=10)
-                ),
-                Card(
-                    Container(Column([
-                        Text("Поле", size=18, weight="bold"),
-                        self.ui.canvas_scale_text,
-                        Row([zoom_out_button, self.ui.canvas_scale_slider, zoom_in_button], spacing=8)],
-                        spacing=10,
-                        horizontal_alignment=CrossAxisAlignment.STRETCH,
-                    ), padding=10)
-                ),
-                start_button,
-                final_button,
-                clear_button,
-                optimize_button],
-                spacing=20,
+                build_sidebar_section("Режимы", [
+                    place_mode_button,
+                    transition_mode_button,
+                    delete_button,
+                ]),
+                build_sidebar_section("Редактор", [
+                    table_editor_button,
+                ]),
+                build_sidebar_section("Алфавит", [
+                    Row([self.ui.alphabet_input, add_alphabet_button], spacing=10),
+                    self.ui.alphabet_display,
+                ]),
+                build_sidebar_section("Регулярные выражения", [
+                    Row([
+                        self.ui.regex_display,
+                        IconButton(
+                            icon=ft.Icons.COPY,
+                            tooltip="Копировать выражение",
+                            on_click=self.copy_regex,
+                        ),
+                    ], alignment=MainAxisAlignment.SPACE_BETWEEN),
+                    regex_button,
+                    regex_from_automaton_button,
+                ]),
+                build_sidebar_section("Масштаб поля", [
+                    Row([zoom_out_button, self.ui.canvas_scale_slider, zoom_in_button, self.ui.canvas_scale_text], spacing=8),
+                ]),
+                build_sidebar_section(None, [
+                    start_button,
+                    final_button,
+                    clear_button,
+                    optimize_button,
+                ], show_divider=False),
+            ],
+                spacing=0,
                 alignment=MainAxisAlignment.START,
                 horizontal_alignment=CrossAxisAlignment.STRETCH,
             ),
-            padding=20,
-            width=450, 
+            bgcolor=Colors.WHITE,
+            padding=ft.padding.only(top=20, bottom=20),
+            width=450,
         )
 
 

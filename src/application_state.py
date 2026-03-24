@@ -49,5 +49,5 @@ class ApplicationUI:
     debug_panel = Container(visible=False)
 
     canvas_container = None
-    canvas_scale_text = Text("Размер поля: 100%", size=14)
+    canvas_scale_text = Text("100%", size=14)
     canvas_scale_slider = Slider(min=50, max=200, value=100, divisions=30)

@@ -60,7 +60,7 @@ def _sync_canvas_size(app: Application) -> None:
     if app.ui.canvas_scale_slider is not None:
         app.ui.canvas_scale_slider.value = app.attr.canvas_scale * 100
 
-    app.ui.canvas_scale_text.value = f"Размер поля: {int(round(app.attr.canvas_scale * 100))}%"
+    app.ui.canvas_scale_text.value = f"{int(round(app.attr.canvas_scale * 100))}%"
 
 
 def set_canvas_scale(scale: float, app: Application) -> None:
