@@ -29,8 +29,8 @@ class ApplicationState:
 
 @dataclass
 class ApplicationUI:
-    word_input = TextField(label="Слово для проверки")
-    alphabet_input = TextField(label="Добавить символ", hint_text="Символ...", width=150)
+    word_input = TextField(label="Слово для проверки", color=Colors.BLACK)
+    alphabet_input = TextField(label="Добавить символ", hint_text="Символ...", width=150, color=Colors.BLACK)
     
     drawing_area = canvas.Canvas(width=700, height=450)
 
@@ -42,7 +42,7 @@ class ApplicationUI:
     open_file_picker = None
     save_file_picker = None
 
-    debug_step_back_btn = ElevatedButton("Назад") 
+    debug_step_back_btn = ElevatedButton("Назад")
     debug_step_forward_btn = ElevatedButton("Вперед")
     debug_continue_btn = ElevatedButton("Продолжить")
     debug_status_text = Text("")
