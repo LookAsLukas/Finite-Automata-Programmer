@@ -47,7 +47,7 @@ def draw_nodes(app: Application) -> None:
         text = canvas.Text(
             x=node.x, y=node.y,
             text=node.name,
-            style=TextStyle(weight=FontWeight.BOLD),
+            style=TextStyle(weight=FontWeight.BOLD, color=Colors.BLACK),
             alignment=ft.alignment.center
         )
         elements.append(text)
@@ -253,14 +253,14 @@ def calc_line(symbols: str, paint: ft.Paint, start: Vector2D, end: Vector2D, dou
     ]
 
 
-def calc_transitions(app: Application) -> List:
+def calc_transitions(app) -> List:
     elements = []
     for transition in app.graph.transitions:
         start_p = Vector2D.from_node(transition.start)
         end_p = Vector2D.from_node(transition.end)
 
         is_selected = app.graph.selected_transition == transition
-        line_color = app.config.selection_color if is_selected else Colors.BLACK
+        line_color = app.config.selection_color if is_selected else "#000000"
         line_width = 3 if is_selected else 2
 
         if transition.start == transition.end:
