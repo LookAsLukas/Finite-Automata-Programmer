@@ -175,7 +175,7 @@ class Application:
         )
 
         top_content = Column([
-            Text("Визуальный автомат (NFA)", size=24, weight="bold"),
+            Text("Визуальный автомат (NFA)", size=24, weight="bold", color=Colors.BLACK),
             Container(
                 content=gesture_area,
                 alignment=alignment.center,
@@ -214,7 +214,7 @@ class Application:
         def build_sidebar_section(title, controls, show_divider=True):
             content_controls = []
             if title:
-                content_controls.append(Text(title, size=18, weight="bold"))
+                content_controls.append(Text(title, size=18, weight="bold", color=Colors.BLACK))
             content_controls.extend(controls)
 
             return Container(

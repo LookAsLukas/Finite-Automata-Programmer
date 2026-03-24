@@ -34,9 +34,9 @@ class ApplicationUI:
     
     drawing_area = canvas.Canvas(width=700, height=450)
 
-    mode_status = Text("Режим размещения: выключен", size=16, color=Colors.GREY_800)
+    mode_status = Text("Mode: Normal", size=16, color=Colors.GREY_800)
     status_text = Text("Готов к работе", size=14, color=Colors.BLUE_GREY_700)
-    alphabet_display = Text("Алфавит: ∅", size=14)
+    alphabet_display = Text("Алфавит: ∅", size=14, color=Colors.BLACK)
     regex_display = Text("Регулярное выражение: не задано", size=14, color=Colors.GREEN)
     
     open_file_picker = None
@@ -49,5 +49,5 @@ class ApplicationUI:
     debug_panel = Container(visible=False)
 
     canvas_container = None
-    canvas_scale_text = Text("100%", size=14)
+    canvas_scale_text = Text("100%", size=14, color=Colors.BLACK)
     canvas_scale_slider = Slider(min=50, max=200, value=100, divisions=30)

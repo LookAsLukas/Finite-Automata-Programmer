@@ -179,7 +179,11 @@ def clear_automaton(app: Application):
 
     app.graph = Graph()
     app.attr = ApplicationState()
+    open_picker = app.ui.open_file_picker
+    save_picker = app.ui.save_file_picker
     app.ui = ApplicationUI()
+    app.ui.open_file_picker = open_picker
+    app.ui.save_file_picker = save_picker
     draw_nodes(app)
     app.page.update()
 
