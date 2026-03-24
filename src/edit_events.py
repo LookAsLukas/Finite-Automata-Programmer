@@ -175,43 +175,10 @@ def remove_alphabet_symbols(app: Application):
 
 
 def clear_automaton(app: Application):
-    from flet import Colors, ElevatedButton, Container, Row
-    import debug
     app.history.add(app.graph)
 
     app.graph = Graph()
     app.attr = ApplicationState()
-    open_picker = app.ui.open_file_picker
-    save_picker = app.ui.save_file_picker
-    app.ui = ApplicationUI()
-    app.ui.open_file_picker = open_picker
-    app.ui.save_file_picker = save_picker
-    app.ui.debug_step_back_btn = ElevatedButton(
-        "← Шаг назад",
-        on_click=lambda e: debug.debug_step_back(app),
-        bgcolor=Colors.AMBER_100
-    )
-    app.ui.debug_step_forward_btn = ElevatedButton(
-        "Шаг вперед →",
-        on_click=lambda e: debug.debug_step_forward(app),
-        bgcolor=Colors.GREEN_100
-    )
-    app.ui.debug_continue_btn = ElevatedButton(
-        "Продолжить",
-        on_click=lambda e: debug.debug_continue(app),
-        bgcolor=Colors.BLUE_100
-    )
-    app.ui.debug_panel = Container(
-        content=Row([
-            app.ui.debug_step_back_btn,
-            app.ui.debug_step_forward_btn,
-            app.ui.debug_continue_btn
-        ], spacing=10),
-        padding=10,
-        bgcolor=Colors.GREY_200,
-        border_radius=5,
-        visible=False  # Изначально скрыт
-    )
     draw_nodes(app)
     app.page.update()
 
