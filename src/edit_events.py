@@ -162,6 +162,18 @@ def add_alphabet_symbols(app: Application):
     app.page.update()
 
 
+def remove_alphabet_symbols(app: Application):
+    symbols = set(app.ui.alphabet_input.value.strip().replace(' ', '').replace(',', ''))
+    if symbols != set():
+        app.attr.alphabet.difference_update(symbols)
+        app.ui.alphabet_display.value = f"Алфавит: {', '.join(sorted(app.attr.alphabet))}"
+        app.ui.alphabet_input.value = ""
+        app.ui.status_text.value = f"Удалены символы '{''.join(symbols)}'"
+    else:
+        app.ui.status_text.value = "Введите хотя бы один символ!"
+    app.page.update()
+
+
 def clear_automaton(app: Application):
     app.history.add(app.graph)
 

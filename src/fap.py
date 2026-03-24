@@ -250,8 +250,12 @@ class Application:
             on_click=lambda e: edit_events.toggle_final_state(self)
         )
         add_alphabet_button = ElevatedButton(
-            "Добавить символ",
+            "Добавить",
             on_click=lambda e: edit_events.add_alphabet_symbols(self)
+        )
+        remove_alphabet_button = ElevatedButton(
+            "Удалить",
+            on_click=lambda e: edit_events.remove_alphabet_symbols(self)
         )
         clear_button = ElevatedButton(
             "Очистить автомат",
@@ -306,7 +310,7 @@ class Application:
                     table_editor_button,
                 ]),
                 build_sidebar_section("Алфавит", [
-                    Row([self.ui.alphabet_input, add_alphabet_button], spacing=10),
+                    Row([self.ui.alphabet_input, add_alphabet_button, remove_alphabet_button], spacing=10),
                     self.ui.alphabet_display,
                 ]),
                 build_sidebar_section("Регулярные выражения", [
