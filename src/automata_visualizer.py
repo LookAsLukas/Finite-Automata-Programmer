@@ -36,10 +36,11 @@ def automaton_to_graph(automaton: NFA, app: Application) -> Graph:
             for i in range(len(nodes))
         ]
 
-    frame_bottom_x = app.config.node_radius
-    frame_bottom_y = app.config.node_radius
-    frame_width = app.attr.canvas_width - 2 * app.config.node_radius
-    frame_height = app.attr.canvas_height - 2 * app.config.node_radius
+    padding_coef = 3
+    frame_bottom_x = padding_coef * app.config.node_radius
+    frame_bottom_y = padding_coef * app.config.node_radius
+    frame_width = app.attr.canvas_width - padding_coef * 2 * app.config.node_radius
+    frame_height = app.attr.canvas_height - padding_coef * 2 * app.config.node_radius
 
     picture_bottom_x = min(x for x, _ in coords)
     picture_bottom_y = min(y for _, y in coords)
