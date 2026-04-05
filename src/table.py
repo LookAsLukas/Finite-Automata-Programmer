@@ -3,6 +3,8 @@ from automata_operations import build_nfa_from_ui
 from graph import Transition, Node
 from application_state import EPSILON_SYMBOL
 
+CHELKA = 450 # высота окна для редактирования таблицы
+
 def open_table_editor(app):
     for node in app.graph.nodes: 
         node.name = str(node.name) 
@@ -16,11 +18,70 @@ def open_table_editor(app):
     cell_fields = {}
     table_holder = ft.Column(scroll=ft.ScrollMode.ADAPTIVE)
 
+    def edit_label(is_row, old_val):
+        edit_tf = ft.TextField(value=old_val, autofocus=True, on_submit=lambda e: save_label(e))
+        
+        def save_label(e):
+            new_val = edit_tf.value.strip()
+            
+            if not new_val:
+                if is_row and old_val in states:
+                    states.remove(old_val)
+                elif not is_row and old_val in symbols:
+                    symbols.remove(old_val)
+            else:
+                if is_row and new_val not in states:
+                    states[states.index(old_val)] = new_val
+                    for sym in symbols:
+                        if (old_val, sym) in cell_fields:
+                            cell_fields[(new_val, sym)] = cell_fields.pop((old_val, sym))
+                elif not is_row and new_val not in symbols:
+                    symbols[symbols.index(old_val)] = new_val
+                    for state in states:
+                        if (state, old_val) in cell_fields:
+                            cell_fields[(state, new_val)] = cell_fields.pop((state, old_val))
+            
+            app.page.close(edit_dialog)
+            build_table_ui()
+            #возвращаем таблицу
+            app.page.open(table_sheet) 
+            app.page.update()
+
+        def cancel_edit(e):
+            app.page.close(edit_dialog)
+            # возвращаем если нажали "отмена"
+            app.page.open(table_sheet)
+            app.page.update()
+
+        edit_dialog = ft.AlertDialog(
+            title=ft.Text("Редактировать " + ("состояние" if is_row else "символ")),
+            content=edit_tf,
+            actions=[
+                ft.ElevatedButton("Отмена", on_click=cancel_edit),
+                ft.ElevatedButton("Сохранить", on_click=save_label)
+            ],
+        )
+        app.page.open(edit_dialog)
+
     def build_table_ui():
-        columns = [ft.DataColumn(ft.Text("Состояние"))] + [ft.DataColumn(ft.Text(sym)) for sym in symbols]
+        columns = [ft.DataColumn(ft.Text("Состояние"))] + [
+            ft.DataColumn(
+                ft.GestureDetector(
+                    content=ft.Text(sym, weight=ft.FontWeight.BOLD),
+                    on_double_tap=lambda e, s=sym: edit_label(False, s)
+                )
+            ) for sym in symbols
+        ]
         rows = []
         for state in states:
-            cells = [ft.DataCell(ft.Text(state))]
+            cells = [
+                ft.DataCell(
+                    ft.GestureDetector(
+                        content=ft.Text(state, weight=ft.FontWeight.BOLD),
+                        on_double_tap=lambda e, s=state: edit_label(True, s)
+                    )
+                )
+            ]
             for sym in symbols:
                 nfa_sym = '' if sym == EPSILON_SYMBOL else sym
                 targets = map(lambda x: x.end.name,
@@ -131,25 +192,30 @@ def open_table_editor(app):
         app.page.close(dialog)
         app.ui.status_text.value = "Таблица применена"
         app.page.update()
-
+    
     build_table_ui()
-    dialog = ft.AlertDialog(
-        title=ft.Text("Редактор таблицы переходов"),
+    
+    #делаем шторку чтобы не загораживало канвас 
+    table_sheet = ft.BottomSheet(
         content=ft.Container(
+            padding=20,
             content=ft.Column([
+                ft.Row([
+                    ft.Text("Редактор таблицы переходов", size=20, weight=ft.FontWeight.BOLD),
+                    ft.IconButton(ft.Icons.CLOSE, on_click=lambda e: app.page.close(table_sheet))
+                ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+                
                 ft.Row([
                     ft.ElevatedButton("Добавить строку", on_click=add_row, icon=ft.Icons.ADD),
                     ft.ElevatedButton("Добавить столбец", on_click=add_column, icon=ft.Icons.ADD),
+                    ft.ElevatedButton("Применить", on_click=apply_changes, bgcolor=ft.Colors.BLUE, color=ft.Colors.WHITE),
                 ]),
                 ft.Text("Введите целевые состояния через запятую."),
+                
                 table_holder,
             ], scroll=ft.ScrollMode.ADAPTIVE, tight=True),
-            width=850,
-            height=500, 
-        ),
-        actions=[
-            ft.ElevatedButton("Отмена", on_click=lambda e: app.page.close(dialog)),
-            ft.ElevatedButton("Применить", on_click=apply_changes),
-        ],
+            height=CHELKA,
+        )
     )
-    app.page.open(dialog)
+    
+    app.page.open(table_sheet)
