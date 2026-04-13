@@ -1,9 +1,13 @@
+import time
+
 from canvas_utils import get_clicked_node, get_clicked_transition
 from dialog_handlers import rename_state_dialog, edit_transition_dialog
 from draw import draw_nodes
 from fap import Application
 from graph import Node, Transition
 from linal import Vector2D
+
+DRAG_REDRAW_INTERVAL = 1 / 60
 
 
 def _event_point(e) -> Vector2D:
@@ -12,6 +16,24 @@ def _event_point(e) -> Vector2D:
 
 def _is_inside_canvas(point: Vector2D, app: Application) -> bool:
     return 0 <= point.x <= app.attr.canvas_width and 0 <= point.y <= app.attr.canvas_height
+
+
+def _remember_drag_redraw(app: Application) -> None:
+    app.graph._drag_draw_at = time.monotonic()
+    app.graph._drag_redraw_pending = False
+
+
+def _mark_drag_redraw_pending(app: Application) -> None:
+    app.graph._drag_redraw_pending = True
+
+
+def _is_drag_redraw_pending(app: Application) -> bool:
+    return getattr(app.graph, "_drag_redraw_pending", False)
+
+
+def _should_redraw_drag(app: Application) -> bool:
+    last_draw_at = getattr(app.graph, "_drag_draw_at", 0.0)
+    return time.monotonic() - last_draw_at >= DRAG_REDRAW_INTERVAL
 
 
 def add_node(click: Vector2D, app: Application) -> None:
@@ -114,26 +136,38 @@ def handle_drag_start(e, app: Application) -> None:
         app.history.add(app.graph)
 
         app.graph.dragging_node = clicked_node
-        draw_nodes(app)
-        app.page.update()
+        _remember_drag_redraw(app)
 
 
 def handle_drag_update(e, app: Application) -> None:
     """Обновление позиции перетаскиваемого узла"""
-    if app.graph.dragging_node:
-        click = _event_point(e)
+    dragging_node = app.graph.dragging_node
+    if dragging_node is None:
+        return
 
-        x = max(app.config.node_radius, min(app.attr.canvas_width - app.config.node_radius, click.x))
-        y = max(app.config.node_radius, min(app.attr.canvas_height - app.config.node_radius, click.y))
+    click = _event_point(e)
 
-        app.graph.dragging_node.x = x
-        app.graph.dragging_node.y = y
-        draw_nodes(app)
-        app.page.update()
+    x = max(app.config.node_radius, min(app.attr.canvas_width - app.config.node_radius, click.x))
+    y = max(app.config.node_radius, min(app.attr.canvas_height - app.config.node_radius, click.y))
+
+    if dragging_node.x == x and dragging_node.y == y:
+        return
+
+    dragging_node.x = x
+    dragging_node.y = y
+
+    if not _should_redraw_drag(app):
+        _mark_drag_redraw_pending(app)
+        return
+
+    draw_nodes(app)
+    _remember_drag_redraw(app)
 
 
 def handle_drag_end(e, app: Application):
     """Завершение перетаскивания"""
     if app.graph.dragging_node:
+        if _is_drag_redraw_pending(app):
+            draw_nodes(app)
         app.graph.dragging_node = None
-        app.page.update()
+        app.graph._drag_redraw_pending = False

@@ -255,13 +255,23 @@ def calc_line(symbols: str, paint: ft.Paint, start: Vector2D, end: Vector2D, dou
 
 def calc_transitions(app) -> List:
     elements = []
+    node_points = {
+        node: Vector2D.from_node(node)
+        for node in app.graph.nodes
+    }
+    transition_pairs = {
+        (transition.start, transition.end)
+        for transition in app.graph.transitions
+    }
+
     for transition in app.graph.transitions:
-        start_p = Vector2D.from_node(transition.start)
-        end_p = Vector2D.from_node(transition.end)
+        start_p = node_points[transition.start]
+        end_p = node_points[transition.end]
 
         is_selected = app.graph.selected_transition == transition
         line_color = app.config.selection_color if is_selected else "#000000"
         line_width = 3 if is_selected else 2
+        paint = ft.Paint(line_color, stroke_width=line_width)
 
         if transition.start == transition.end:
             out_phis = {
@@ -278,30 +288,26 @@ def calc_transitions(app) -> List:
             }
             elements += calc_self_line(
                 transition.symbols,
-                ft.Paint(line_color, stroke_width=line_width),
+                paint,
                 start_p,
                 app.config.node_radius,
                 out_phis | in_phis
             )
             continue
 
-        double = False
-        for transition_ in app.graph.transitions:
-            if transition_.end == transition.start and transition_.start == transition.end:
-                double = True
-                break
+        double = (transition.end, transition.start) in transition_pairs
 
         if is_line_intersecting_node(start_p, end_p, app):
             elements += calc_curved_line(
                 transition.symbols,
-                ft.Paint(line_color, stroke_width=line_width),
+                paint,
                 start_p, end_p,
                 app.config.node_radius
             )
         else:
             elements += calc_line(
                 transition.symbols,
-                ft.Paint(line_color, stroke_width=line_width),
+                paint,
                 start_p, end_p,
                 double,
                 app.config.node_radius
