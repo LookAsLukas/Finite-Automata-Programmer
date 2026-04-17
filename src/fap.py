@@ -22,8 +22,10 @@ from application_state import ApplicationUI, ApplicationState
 from graph import Graph
 from config import ApplicatonConfig
 from graph_history import History
+from draw import Draw
 from table import open_table_editor
 import debug
+
 
 class Application:
     graph = Graph()
@@ -39,8 +41,7 @@ class Application:
         self.page.padding = 0
         self.page.bgcolor = Colors.BLUE_GREY_50
         self.page.add(self.build_page())
-        import draw
-        draw.draw_nodes(self)
+        self.draw = Draw(self)
         self.page.update()
 
     def copy_regex(self, e):

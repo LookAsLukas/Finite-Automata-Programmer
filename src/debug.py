@@ -2,7 +2,6 @@ import flet as ft
 from flet import Row, ElevatedButton, Container, Colors
 from time import sleep
 from automata_operations import build_nfa_from_ui
-from draw import draw_nodes
 from fap import Application
 
 
@@ -37,7 +36,7 @@ def toggle_debug_mode(app: Application):
         
         app.attr.debug_step_info = ""
         app.ui.debug_status_text.visible = False 
-        draw_nodes(app)
+        app.draw.redraw()
         app.page.update()
     else:
         word = app.ui.word_input.value.strip()
@@ -208,7 +207,7 @@ def update_debug_view(app: Application, message: str):
     app.attr.debug_step_info = step_info
     app.ui.debug_status_text.value = step_info
     
-    draw_nodes(app)
+    app.draw.redraw()
     app.page.update()
 
 

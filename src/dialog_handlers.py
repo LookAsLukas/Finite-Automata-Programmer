@@ -5,7 +5,6 @@ from automata_operations import import_automaton_data
 from automata.fa.nfa import NFA
 from automata.fa.dfa import DFA
 from application_state import EPSILON_SYMBOL
-from draw import draw_nodes
 from graph import Node, Transition
 
 
@@ -24,7 +23,7 @@ def rename_state_dialog(node: Node, app: Application) -> AlertDialog:
 
         node.name = new_name
 
-        draw_nodes(app)
+        app.draw.update_node(node)
         app.page.close(dialog)
         app.page.update()
 
@@ -52,7 +51,7 @@ def edit_transition_dialog(transition: Transition, app: Application) -> AlertDia
             app.attr.alphabet.update(new_symbols)
             app.ui.alphabet_display.value = f"Алфавит: {', '.join(sorted(app.attr.alphabet))}"
 
-        draw_nodes(app)
+        app.draw.update_transition(transition)
         app.page.close(dialog)
         app.page.update()
 
@@ -116,7 +115,7 @@ def regex_input_dialog(app: Application) -> AlertDialog:
             app.attr.regex = regex_str
             app.ui.regex_display.value = f"Регулярное выражение: {regex_str}"
             if import_automaton_data(optimized_nfa, app):
-                draw_nodes(app)
+                app.draw.redraw()
                 app.ui.status_text.value = f"Автомат построен"
                 app.page.update()
             else:

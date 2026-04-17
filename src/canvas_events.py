@@ -1,6 +1,5 @@
 from canvas_utils import get_clicked_node, get_clicked_transition
 from dialog_handlers import rename_state_dialog, edit_transition_dialog
-from draw import draw_nodes
 from fap import Application
 from graph import Node, Transition
 from linal import Vector2D
@@ -27,12 +26,12 @@ def add_node(click: Vector2D, app: Application) -> None:
     app.history.add(app.graph)
 
     name = f"q{app.graph.node_counter}"
-    app.graph.nodes.add(Node(
+    node = Node(
         x=click.x, y=click.y,
-        name=name
-    ))
+        name=name)
+    app.graph.nodes.add(node)
     app.graph.node_counter += 1
-    draw_nodes(app)
+    app.draw.update_node(node)
 
 
 def handle_canvas_click(e, app: Application) -> None:
@@ -57,22 +56,42 @@ def handle_canvas_click(e, app: Application) -> None:
             if app.attr.alphabet == set():
                 app.attr.alphabet.add("a")
             symbol = next(iter(app.attr.alphabet))
-            app.graph.transitions.add(Transition(
+            transition = Transition(
                 start=app.graph.selected_node,
                 end=clicked_node,
-                symbols=symbol
-            ))
+                symbols=symbol)
 
+            if len(list(filter(lambda tr: tr.start == transition.start and tr.end == transition.end,
+                               app.graph.transitions))) == 0:
+                app.graph.transitions.add(transition)
+                app.draw.update_transition(transition)
+
+        prev_selected = app.graph.selected_node
         app.graph.selected_node = clicked_node
-        app.graph.selected_transition = None
-    elif clicked_transition is not None:
-        app.graph.selected_transition = clicked_transition
-        app.graph.selected_node = None
-    else:
-        app.graph.selected_node = None
-        app.graph.selected_transition = None
+        app.draw.update_node(prev_selected)
+        app.draw.update_node(app.graph.selected_node)
 
-    draw_nodes(app)
+        prev_selected = app.graph.selected_transition
+        app.graph.selected_transition = None
+        app.draw.update_transition(prev_selected)
+    elif clicked_transition is not None:
+        prev_selected = app.graph.selected_transition
+        app.graph.selected_transition = clicked_transition
+        app.draw.update_transition(prev_selected)
+        app.draw.update_transition(app.graph.selected_transition)
+
+        prev_selected = app.graph.selected_node
+        app.graph.selected_node = None
+        app.draw.update_node(prev_selected)
+    else:
+        prev_selected = app.graph.selected_node
+        app.graph.selected_node = None
+        app.draw.update_node(prev_selected)
+
+        prev_selected = app.graph.selected_transition
+        app.graph.selected_transition = None
+        app.draw.update_transition(prev_selected)
+
     app.page.update()
 
 
@@ -114,7 +133,7 @@ def handle_drag_start(e, app: Application) -> None:
         app.history.add(app.graph)
 
         app.graph.dragging_node = clicked_node
-        draw_nodes(app)
+        app.draw.update_node(clicked_node)
         app.page.update()
 
 
@@ -128,7 +147,7 @@ def handle_drag_update(e, app: Application) -> None:
 
         app.graph.dragging_node.x = x
         app.graph.dragging_node.y = y
-        draw_nodes(app)
+        app.draw.update_node(app.graph.dragging_node)
         app.page.update()
 
 

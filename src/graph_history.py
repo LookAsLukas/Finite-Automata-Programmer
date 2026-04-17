@@ -25,8 +25,7 @@ class History:
 
         self.temp_stash.append(deepcopy(app.graph))
         app.graph = self.graph_buffer.pop()
-        from draw import draw_nodes
-        draw_nodes(app)
+        app.draw.redraw()
 
     def redo_click(self, app):
         if len(self.temp_stash) == 0:
@@ -34,5 +33,4 @@ class History:
 
         self.graph_buffer.append(deepcopy(app.graph))
         app.graph = self.temp_stash.pop()
-        from draw import draw_nodes
-        draw_nodes(app)
+        app.draw.redraw()

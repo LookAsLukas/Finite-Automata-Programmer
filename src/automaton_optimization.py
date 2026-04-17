@@ -3,7 +3,6 @@ from __future__ import annotations
 from automata.fa.dfa import DFA
 from automata.fa.nfa import NFA
 from automata_operations import import_automaton_data, build_nfa_from_ui
-from draw import draw_nodes
 
 
 def handle_optimize_click(app: Application):
@@ -24,7 +23,7 @@ def handle_optimize_click(app: Application):
 
         min_nfa = NFA.from_dfa(DFA.from_nfa(nfa).minify())
         if import_automaton_data(min_nfa, app):
-            draw_nodes(app)
+            app.draw.redraw()
             app.ui.status_text.value = "Оптимизация выполнена успешно!"
         else:
             app.ui.status_text.value = "Ошибка отрисовки результата"

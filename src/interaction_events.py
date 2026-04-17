@@ -7,7 +7,6 @@ from automata_operations import (
     nfa_to_regex_state_elimination,
 )
 from automata_io import load_automaton_from_json, save_automaton_to_json
-from draw import draw_nodes
 from flet import FilePicker
 from automata.fa.nfa import NFA
 from automata.fa.dfa import DFA
@@ -111,7 +110,7 @@ def import_automaton_from_path(file_path: str, app: Application) -> None:
         if regex:
             app.attr.regex = regex
             app.ui.regex_display.value = f"Регулярное выражение: {regex}"
-        draw_nodes(app)
+        app.draw.redraw()
         app.page.update()
 
 

@@ -126,8 +126,7 @@ def open_table_editor(app):
         app.attr.alphabet.update(new_alphabet)
         app.ui.alphabet_display.value = f"Алфавит: {', '.join(sorted(app.attr.alphabet))}"
 
-        from draw import draw_nodes
-        draw_nodes(app)
+        app.draw.redraw()
         app.page.close(dialog)
         app.ui.status_text.value = "Таблица применена"
         app.page.update()

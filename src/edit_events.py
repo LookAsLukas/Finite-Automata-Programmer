@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from draw import draw_nodes
 from graph import NodeType, Graph
 from application_state import ApplicationState, ApplicationUI
 
@@ -72,7 +71,7 @@ def set_canvas_scale(scale: float, app: Application) -> None:
     app.attr.canvas_width = app.attr.base_canvas_width * app.attr.canvas_scale
     app.attr.canvas_height = app.attr.base_canvas_height * app.attr.canvas_scale
     _sync_canvas_size(app)
-    draw_nodes(app)
+    app.draw.redraw()
     app.page.update()
 
 
@@ -123,7 +122,7 @@ def toggle_start_state(app: Application):
         elif app.graph.selected_node.type == NodeType.FINAL:
             app.graph.selected_node.type = NodeType.START_FINAL
 
-    draw_nodes(app)
+    app.draw.update_node(app.graph.selected_node)
     app.page.update()
 
 
@@ -146,7 +145,7 @@ def toggle_final_state(app: Application):
         elif app.graph.selected_node.type == NodeType.START:
             app.graph.selected_node.type = NodeType.START_FINAL
 
-    draw_nodes(app)
+    app.draw.update_node(app.graph.selected_node)
     app.page.update()
 
 
@@ -179,7 +178,7 @@ def clear_automaton(app: Application):
 
     app.graph = Graph()
     app.attr = ApplicationState()
-    draw_nodes(app)
+    app.draw.redraw()
     app.page.update()
 
 
@@ -187,7 +186,7 @@ def handle_delete(app: Application):
     if app.graph.selected_node or app.graph.selected_transition:
         app.history.add(app.graph)
 
-    if app.graph.selected_node is not None:
+    if app.graph.selected_node:
         app.graph.nodes.remove(app.graph.selected_node)
         app.graph.transitions = {
             transition
@@ -195,13 +194,14 @@ def handle_delete(app: Application):
             if transition.start != app.graph.selected_node and
             transition.end != app.graph.selected_node
         }
+        app.draw.update_node(app.graph.selected_node)
     elif app.graph.selected_transition:
         app.graph.transitions.remove(app.graph.selected_transition)
+        app.draw.update_transition(app.graph.selected_transition)
     else:
         app.ui.status_text.value = "Ничего не выбрано для удаления"
 
     app.graph.selected_node = None
     app.graph.selected_transition = None
 
-    draw_nodes(app)
     app.page.update()
