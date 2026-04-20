@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from automata.fa.nfa import NFA
 from automata_visualizer import automaton_to_graph
-from application_state import EPSILON_SYMBOL
+from application_state import EPSILON_SYMBOL, EditorMode
 import re
 
 EMPTY_SET_SYMBOL = "∅"
@@ -255,18 +255,18 @@ def import_automaton_data(automaton: NFA, app: Application) -> bool:
         )
 
     try:
+        from edit_events import set_editor_mode
+
         app.history.add(app.graph)
         app.graph = automaton_to_graph(automaton, app)
         app.attr.alphabet = set(automaton.input_symbols)
-        app.attr.placing_mode = False
-        app.attr.transition_mode = False
+        set_editor_mode(app, EditorMode.SELECT, update_page=False)
 
         if app.attr.alphabet:
             app.ui.alphabet_display.value = f"Алфавит: {', '.join(sorted(app.attr.alphabet))}"
         else:
             app.ui.alphabet_display.value = "Алфавит: ∅"
-            
-        app.ui.mode_status.value = "Mode: Normal"
+
         app.ui.status_text.value = "Автомат импортирован"
 
         return True

@@ -1,6 +1,7 @@
 from canvas_utils import get_clicked_node, get_clicked_transition
 from dialog_handlers import rename_state_dialog, edit_transition_dialog
 from draw import draw_nodes
+from application_state import EditorMode
 from fap import Application
 from graph import Node, Transition
 from linal import Vector2D
@@ -16,7 +17,7 @@ def _is_inside_canvas(point: Vector2D, app: Application) -> bool:
 
 def add_node(click: Vector2D, app: Application) -> None:
     """Добавляет узел в позиции клика"""
-    if not app.attr.placing_mode:
+    if app.attr.editor_mode is not EditorMode.NODES:
         return
 
     # Проверяем, что клик внутри канваса (с учетом границ для узла)
@@ -46,12 +47,12 @@ def handle_canvas_click(e, app: Application) -> None:
     clicked_node = get_clicked_node(click, app)
     clicked_transition = get_clicked_transition(click, app)
 
-    if app.attr.placing_mode:
+    if app.attr.editor_mode is EditorMode.NODES:
         add_node(click, app)
         return
 
     if clicked_node is not None:
-        if app.graph.selected_node is not None and app.attr.transition_mode:
+        if app.graph.selected_node is not None and app.attr.editor_mode is EditorMode.TRANSITIONS:
             app.history.add(app.graph)
 
             if app.attr.alphabet == set():
@@ -78,7 +79,7 @@ def handle_canvas_click(e, app: Application) -> None:
 
 def handle_double_click(e, app: Application) -> None:
     """Обрабатывает двойной клик на canvas"""
-    if app.attr.placing_mode or app.attr.transition_mode:
+    if app.attr.editor_mode is not EditorMode.SELECT:
         return
 
     click = _event_point(e)
@@ -100,7 +101,7 @@ def handle_double_click(e, app: Application) -> None:
 
 def handle_drag_start(e, app: Application) -> None:
     """Начало перетаскивания узла"""
-    if app.attr.placing_mode or app.attr.transition_mode:
+    if app.attr.editor_mode is not EditorMode.SELECT:
         return
 
     click = _event_point(e)

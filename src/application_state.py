@@ -1,3 +1,4 @@
+from enum import Enum
 from flet import Colors, Text, TextField, canvas, ElevatedButton, Container, Slider
 from dataclasses import dataclass, field
 from typing import Set
@@ -5,10 +6,15 @@ from typing import Set
 EPSILON_SYMBOL = "ε"
 
 
+class EditorMode(Enum):
+    SELECT = "select"
+    NODES = "nodes"
+    TRANSITIONS = "transitions"
+
+
 @dataclass
 class ApplicationState:
-    placing_mode: bool = False
-    transition_mode: bool = False
+    editor_mode: EditorMode = EditorMode.SELECT
     alphabet: Set[str] = field(default_factory=set)
     regex: str = ""
     base_canvas_width: float = 700
@@ -34,7 +40,6 @@ class ApplicationUI:
     
     drawing_area = canvas.Canvas(width=700, height=450)
 
-    mode_status = Text("Mode: Normal", size=16, color=Colors.GREY_800)
     status_text = Text("Готов к работе", size=14, color=Colors.BLUE_GREY_700)
     alphabet_display = Text("Алфавит: ∅", size=14, color=Colors.BLACK)
     regex_display = Text("Регулярное выражение: не задано", size=14, color=Colors.GREEN)
@@ -49,5 +54,8 @@ class ApplicationUI:
     debug_panel = Container(visible=False)
 
     canvas_container = None
+    mode_select_button = None
+    mode_nodes_button = None
+    mode_transitions_button = None
     canvas_scale_text = Text("100%", size=14, color=Colors.BLACK)
     canvas_scale_slider = Slider(min=50, max=200, value=100, divisions=30)
