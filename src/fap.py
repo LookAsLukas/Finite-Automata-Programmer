@@ -39,9 +39,74 @@ class Application:
         self.page.padding = 0
         self.page.bgcolor = Colors.BLUE_GREY_50
         self.page.add(self.build_page())
+        self.page.on_keyboard_event = self.handle_keyboard
         import draw
         draw.draw_nodes(self)
         self.page.update()
+
+    def handle_keyboard(self, e: ft.KeyboardEvent):
+        key = e.key.upper() 
+        
+        if key == "DELETE":
+            import edit_events
+            edit_events.handle_delete(self)
+        elif e.ctrl and key in ["Z", "Я"]:
+            self.history.undo_click(self)
+        elif e.ctrl and key in ["Y", "Н"]:
+            self.history.redo_click(self)
+        elif e.ctrl and key in ["C", "С"]:
+            self.copy_selected()
+        elif e.ctrl and key in ["V", "М"]: 
+            self.paste_selected()
+
+    def copy_selected(self):
+        """Копирует выделенный узел в память, а его имя — в системный буфер."""
+        if self.graph.selected_node:
+            self.copied_node = self.graph.selected_node # Сохраняем сам узел
+            self.page.set_clipboard(self.graph.selected_node.name)
+            self.ui.status_text.value = f"Скопирован узел: {self.graph.selected_node.name}"
+        elif self.graph.selected_transition:
+            self.page.set_clipboard(self.graph.selected_transition.symbols)
+            self.ui.status_text.value = f"Скопированы символы: {self.graph.selected_transition.symbols}"
+        else:
+            self.ui.status_text.value = "Ничего не выбрано для копирования"
+        self.page.update()
+
+    def paste_selected(self):
+        """Вставляет скопированный узел со смещением координат."""
+        if hasattr(self, 'copied_node') and self.copied_node:
+            self.history.add(self.graph) # Сохраняем историю для Undo
+            
+            # Подбираем свободное имя узла (добавляем штрих)
+            existing_names = {str(n.name) for n in self.graph.nodes}
+            base_name = str(self.copied_node.name)
+            new_name = base_name + "'"
+            while new_name in existing_names:
+                new_name += "'"
+            
+            import graph
+            # Создаем новый узел со сдвигом +30px по осям, чтобы не перекрывал старый
+            new_node = graph.Node(
+                x=self.copied_node.x + 30,
+                y=self.copied_node.y + 30,
+                name=new_name
+            )
+            
+            # Если у оригинала был особый тип (начальное/конечное), копируем его
+            if hasattr(self.copied_node, 'type'):
+                new_node.type = self.copied_node.type
+                
+            self.graph.nodes.add(new_node)
+            
+            # Снимаем выделение со старого и выделяем только что вставленный
+            self.graph.selected_node = new_node
+            self.graph.selected_transition = None
+            
+            self.ui.status_text.value = f"Вставлен узел: {new_name}"
+            
+            import draw
+            draw.draw_nodes(self)
+            self.page.update()
 
     def copy_regex(self, e):
         if self.attr.regex:

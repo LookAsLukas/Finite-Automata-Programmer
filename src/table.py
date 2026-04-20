@@ -18,9 +18,9 @@ class TableEditor:
         self.cell_fields = {}
         self.table_holder = ft.Column(scroll=ft.ScrollMode.ADAPTIVE)
         self.table_sheet = None
+        self._table_version = 0  # <-- Добавлен счетчик версий для решения проблемы с перерисовкой
 
     def get_transition_map(self):
-        """Оптимизированный сбор переходов в словарь."""
         tr_map = {}
         for tr in self.app.graph.transitions:
             start_name = str(tr.start.name)
@@ -35,7 +35,7 @@ class TableEditor:
         return tr_map
 
     def build_table_ui(self):
-        """Отрисовка таблицы без подсказок."""
+        self._table_version += 1 # Меняем ключ при каждом построении, чтобы форсировать рендер Flet
         tr_map = self.get_transition_map()
         
         columns = [ft.DataColumn(ft.Text("Состояние"))] + [
@@ -67,7 +67,6 @@ class TableEditor:
 
                 tf = ft.TextField(
                     value=existing_val,
-                    # hint_text удален
                     width=100,
                     height=40,
                     text_align=ft.TextAlign.CENTER,
@@ -78,10 +77,12 @@ class TableEditor:
             
             rows.append(ft.DataRow(cells=cells))
 
-        self.table_holder.controls = [
+        self.table_holder.controls.clear()
+        self.table_holder.controls.append(
             ft.Row(
                 controls=[
                     ft.DataTable(
+                        key=f"table_render_{self._table_version}", # <-- ГЛАВНЫЙ ФИКС: Flet вынужден перерисовать таблицу!
                         columns=columns,
                         rows=rows,
                         border=ft.border.all(1, "black"),
@@ -93,22 +94,50 @@ class TableEditor:
                 ],
                 scroll=ft.ScrollMode.ADAPTIVE
             )
-        ]
+        )
+
+    def refresh_ui(self):
+        self.build_table_ui()
+        try:
+            self.table_holder.update()
+        except Exception:
+            self.app.page.update()
 
     def edit_label(self, is_row, old_val):
         edit_tf = ft.TextField(value=old_val, autofocus=True)
         
         def save_label(e):
-            new_val = edit_tf.value.strip()
-            if not new_val: return
+            new_val = (edit_tf.value or "").strip()
+            # Проверяем, ввел ли пользователь пустоту или старое значение
+            if not new_val or new_val == old_val:
+                self.app.page.close(edit_dialog)
+                return
             
             if is_row:
+                # Защита: нельзя переименовать в состояние, которое уже есть в таблице
+                if new_val in self.states:
+                    self.app.page.close(edit_dialog)
+                    return 
+                    
                 idx = self.states.index(old_val)
                 self.states[idx] = new_val
                 for sym in self.symbols:
                     if (old_val, sym) in self.cell_fields:
                         self.cell_fields[(new_val, sym)] = self.cell_fields.pop((old_val, sym))
+                
+                # Ищем и переименовываем старое состояние внутри всех ячеек таблицы
+                for key, tf in self.cell_fields.items():
+                    if tf.value:
+                        targets = [t.strip() for t in tf.value.split(',')]
+                        if old_val in targets:
+                            new_targets = [new_val if t == old_val else t for t in targets]
+                            tf.value = ", ".join(new_targets)
             else:
+                # Защита: нельзя создать два одинаковых символа (столбца)
+                if new_val in self.symbols:
+                    self.app.page.close(edit_dialog)
+                    return 
+                    
                 idx = self.symbols.index(old_val)
                 self.symbols[idx] = new_val
                 for state in self.states:
@@ -204,35 +233,32 @@ class TableEditor:
         self.app.ui.status_text.value = "Таблица применена"
         self.app.page.update()
 
-    def refresh_ui(self):
-        self.build_table_ui()
-        self.app.page.update()
+    def _build_sheet_content(self):
+        return ft.Container(
+            padding=20,
+            content=ft.Column([
+                ft.Row([
+                    ft.Text("Редактор таблицы", size=20, weight="bold"),
+                    ft.IconButton(ft.Icons.CLOSE, on_click=lambda _: self.app.page.close(self.table_sheet))
+                ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+                ft.Row([
+                    ft.ElevatedButton("Строка +", on_click=self.add_row, icon=ft.Icons.ADD),
+                    ft.ElevatedButton("Строка -", on_click=self.delete_row, icon=ft.Icons.REMOVE, bgcolor=ft.Colors.RED_50),
+                    ft.VerticalDivider(),
+                    ft.ElevatedButton("Столбец +", on_click=self.add_column, icon=ft.Icons.ADD_CIRCLE),
+                    ft.ElevatedButton("Столбец -", on_click=self.delete_column, icon=ft.Icons.REMOVE_CIRCLE, bgcolor=ft.Colors.RED_50),
+                    ft.VerticalDivider(),
+                    ft.ElevatedButton("Применить", on_click=self.apply_changes, bgcolor=ft.Colors.BLUE, color=ft.Colors.WHITE),
+                ], wrap=True),
+                self.table_holder,
+            ], scroll=ft.ScrollMode.ADAPTIVE, tight=True),
+            height=CHELKA,
+        )
 
     def open(self):
         self.build_table_ui()
         self.table_sheet = ft.BottomSheet(
-            content=ft.Container(
-                padding=20,
-                content=ft.Column([
-                    ft.Row([
-                        ft.Text("Редактор таблицы", size=20, weight="bold"),
-                        ft.IconButton(ft.Icons.CLOSE, on_click=lambda _: self.app.page.close(self.table_sheet))
-                    ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
-                    
-                    ft.Row([
-                        ft.ElevatedButton("Строка +", on_click=self.add_row, icon=ft.Icons.ADD),
-                        ft.ElevatedButton("Строка -", on_click=self.delete_row, icon=ft.Icons.REMOVE, bgcolor=ft.Colors.RED_50),
-                        ft.VerticalDivider(),
-                        ft.ElevatedButton("Столбец +", on_click=self.add_column, icon=ft.Icons.ADD_CIRCLE),
-                        ft.ElevatedButton("Столбец -", on_click=self.delete_column, icon=ft.Icons.REMOVE_CIRCLE, bgcolor=ft.Colors.RED_50),
-                        ft.VerticalDivider(),
-                        ft.ElevatedButton("Применить", on_click=self.apply_changes, bgcolor=ft.Colors.BLUE, color=ft.Colors.WHITE),
-                    ], wrap=True),
-                    
-                    self.table_holder,
-                ], scroll=ft.ScrollMode.ADAPTIVE, tight=True),
-                height=CHELKA,
-            )
+            content=self._build_sheet_content()
         )
         self.app.page.open(self.table_sheet)
 
