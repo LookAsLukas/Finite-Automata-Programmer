@@ -180,11 +180,7 @@ class Application:
                 content=gesture_area,
                 alignment=alignment.center,
             ),
-            Column([
-                self.ui.mode_status,
-                self.ui.status_text],
-                spacing=5
-            )],
+            self.ui.status_text],
             spacing=15,
             horizontal_alignment=CrossAxisAlignment.CENTER,
         )
@@ -233,13 +229,43 @@ class Application:
             "Удалить",
             on_click=lambda e: edit_events.handle_delete(self)
         )
-        place_mode_button = ElevatedButton(
-            "Режим добавления состояний",
-            on_click=lambda e: edit_events.toggle_placing_mode(self)
+        self.ui.mode_select_button = ElevatedButton(
+            "Выбор",
+            icon=ft.Icons.PAN_TOOL,
+            tooltip="Обычный режим: выбор, редактирование и перетаскивание",
+            on_click=lambda e: edit_events.activate_selection_mode(self),
+            expand=True,
+            height=52,
         )
-        transition_mode_button = ElevatedButton(
-            "Режим добавления переходов",
-            on_click=lambda e: edit_events.toggle_transition_mode(self)
+        self.ui.mode_nodes_button = ElevatedButton(
+            "Состояния",
+            icon=ft.Icons.TOUCH_APP,
+            tooltip="Добавление новых состояний по клику на поле",
+            on_click=lambda e: edit_events.activate_node_creation_mode(self),
+            expand=True,
+            height=52,
+        )
+        self.ui.mode_transitions_button = ElevatedButton(
+            "Переходы",
+            icon=ft.Icons.SWAP_HORIZ,
+            tooltip="Добавление переходов между выбранными состояниями",
+            on_click=lambda e: edit_events.activate_transition_creation_mode(self),
+            expand=True,
+            height=52,
+        )
+        edit_events.refresh_mode_buttons(self)
+        mode_selector = Container(
+            content=Row(
+                [
+                    self.ui.mode_select_button,
+                    self.ui.mode_nodes_button,
+                    self.ui.mode_transitions_button,
+                ],
+                spacing=8,
+            ),
+            padding=4,
+            bgcolor=Colors.BLUE_GREY_50,
+            border_radius=18,
         )
         start_button = ElevatedButton(
             "Переключить начальное состояние",
@@ -302,8 +328,7 @@ class Application:
         return Container(
             content=Column([
                 build_sidebar_section("Режимы", [
-                    place_mode_button,
-                    transition_mode_button,
+                    mode_selector,
                     delete_button,
                 ]),
                 build_sidebar_section("Редактор", [
