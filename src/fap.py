@@ -39,9 +39,107 @@ class Application:
         self.page.padding = 0
         self.page.bgcolor = Colors.BLUE_GREY_50
         self.page.add(self.build_page())
+        self.apply_theme()
         import draw
         draw.draw_nodes(self)
         self.page.update()
+
+    def theme_colors(self):
+        if self.config.theme == "dark":
+            return {
+                "page": Colors.BLUE_GREY_900,
+                "surface": Colors.BLUE_GREY_800,
+                "canvas": Colors.BLUE_GREY_700,
+                "mode": Colors.BLUE_GREY_900,
+                "text": Colors.WHITE,
+                "muted": Colors.BLUE_GREY_100,
+                "regex": Colors.GREEN_200,
+            }
+        return {
+            "page": Colors.BLUE_GREY_50,
+            "surface": Colors.WHITE,
+            "canvas": Colors.WHITE,
+            "mode": Colors.BLUE_GREY_50,
+            "text": Colors.BLACK,
+            "muted": Colors.BLUE_GREY_700,
+            "regex": Colors.GREEN,
+        }
+
+    def apply_theme(self):
+        colors = self.theme_colors()
+        self.page.theme_mode = ft.ThemeMode.DARK if self.config.theme == "dark" else ft.ThemeMode.LIGHT
+        self.page.bgcolor = colors["page"]
+        self.ui.word_input.color = colors["text"]
+        self.ui.alphabet_input.color = colors["text"]
+        self.ui.status_text.color = colors["muted"]
+        self.ui.alphabet_display.color = colors["text"]
+        self.ui.regex_display.color = colors["regex"]
+        self.ui.canvas_scale_text.color = colors["text"]
+        if self.ui.canvas_title is not None:
+            self.ui.canvas_title.color = colors["text"]
+        if self.ui.canvas_container is not None:
+            self.ui.canvas_container.bgcolor = colors["canvas"]
+        if self.ui.control_side is not None:
+            self.ui.control_side.bgcolor = colors["surface"]
+        if self.ui.mode_selector is not None:
+            self.ui.mode_selector.bgcolor = colors["mode"]
+        for text in self.ui.theme_texts:
+            text.color = colors["text"]
+
+    def build_settings_dialog(self):
+        import draw
+
+        node_size_text = Text(f"{self.config.node_text_size}px")
+        transition_size_text = Text(f"{self.config.transition_text_size}px")
+
+        def on_theme_change(e):
+            self.config.theme = e.control.value
+            self.apply_theme()
+            draw.draw_nodes(self)
+            self.page.update()
+
+        def on_node_size(e):
+            self.config.node_text_size = int(e.control.value)
+            node_size_text.value = f"{self.config.node_text_size}px"
+            draw.draw_nodes(self)
+            self.page.update()
+
+        def on_transition_size(e):
+            self.config.transition_text_size = int(e.control.value)
+            transition_size_text.value = f"{self.config.transition_text_size}px"
+            draw.draw_nodes(self)
+            self.page.update()
+
+        dialog = ft.AlertDialog(
+            modal=True,
+            title=Text("Настройки"),
+            content=Container(
+                width=360,
+                content=Column([
+                    Text("Внешний вид", size=16, weight="bold"),
+                    ft.RadioGroup(
+                        value=self.config.theme,
+                        content=Row([
+                            ft.Radio(value="light", label="Светлая"),
+                            ft.Radio(value="dark", label="Темная"),
+                        ]),
+                        on_change=on_theme_change,
+                    ),
+                    Text("Размер имени нод"),
+                    Row([
+                        Slider(min=10, max=28, divisions=18, value=self.config.node_text_size, on_change=on_node_size, expand=True),
+                        node_size_text,
+                    ]),
+                    Text("Размер символов перехода"),
+                    Row([
+                        Slider(min=10, max=32, divisions=22, value=self.config.transition_text_size, on_change=on_transition_size, expand=True),
+                        transition_size_text,
+                    ]),
+                ], tight=True),
+            ),
+            actions=[ElevatedButton("Закрыть", on_click=lambda e: self.page.close(dialog))],
+        )
+        return dialog
 
     def copy_regex(self, e):
         if self.attr.regex:
@@ -60,6 +158,7 @@ class Application:
         )
         self.ui.open_file_picker = FilePicker(on_result=lambda e: handle_open_file_result(e, self))
         self.ui.save_file_picker = FilePicker(on_result=lambda e: handle_save_file_result(e, self))
+        self.ui.theme_texts = []
         self.page.overlay.append(self.ui.open_file_picker)
         self.page.overlay.append(self.ui.save_file_picker)
 
@@ -120,6 +219,12 @@ class Application:
             center_title=False,
             actions=[
                 self.ui.debug_panel,  # Теперь точно не None
+                IconButton(
+                    icon=ft.Icons.SETTINGS,
+                    tooltip="Настройки",
+                    icon_color=Colors.WHITE,
+                    on_click=lambda e: self.page.open(self.build_settings_dialog()),
+                ),
                 ElevatedButton(
                     "Отладка",
                     on_click=lambda e: debug.toggle_debug_mode(self),
@@ -174,8 +279,10 @@ class Application:
             vertical_alignment=CrossAxisAlignment.CENTER,
         )
 
+        self.ui.canvas_title = Text("Визуальный автомат (NFA)", size=24, weight="bold", color=self.theme_colors()["text"])
+
         top_content = Column([
-            Text("Визуальный автомат (NFA)", size=24, weight="bold", color=Colors.BLACK),
+            self.ui.canvas_title,
             Container(
                 content=gesture_area,
                 alignment=alignment.center,
@@ -210,7 +317,9 @@ class Application:
         def build_sidebar_section(title, controls, show_divider=True):
             content_controls = []
             if title:
-                content_controls.append(Text(title, size=18, weight="bold", color=Colors.BLACK))
+                title_text = Text(title, size=18, weight="bold", color=self.theme_colors()["text"])
+                self.ui.theme_texts.append(title_text)
+                content_controls.append(title_text)
             content_controls.extend(controls)
 
             return Container(
@@ -254,7 +363,7 @@ class Application:
             height=52,
         )
         edit_events.refresh_mode_buttons(self)
-        mode_selector = Container(
+        self.ui.mode_selector = Container(
             content=Row(
                 [
                     self.ui.mode_select_button,
@@ -325,10 +434,10 @@ class Application:
         )
         self.ui.canvas_scale_text.value = f"{int(self.attr.canvas_scale * 100)}%"
 
-        return Container(
+        self.ui.control_side = Container(
             content=Column([
                 build_sidebar_section("Режимы", [
-                    mode_selector,
+                    self.ui.mode_selector,
                     delete_button,
                 ]),
                 build_sidebar_section("Редактор", [
@@ -368,6 +477,7 @@ class Application:
             padding=ft.padding.only(top=20, bottom=20),
             width=450,
         )
+        return self.ui.control_side
 
 
 if __name__ == "__main__":

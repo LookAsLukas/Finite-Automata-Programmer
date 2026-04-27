@@ -54,6 +54,10 @@ class ApplicationUI:
     debug_panel = Container(visible=False)
 
     canvas_container = None
+    canvas_title = None
+    control_side = None
+    mode_selector = None
+    theme_texts = []
     mode_select_button = None
     mode_nodes_button = None
     mode_transitions_button = None

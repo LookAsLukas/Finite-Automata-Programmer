@@ -3,6 +3,9 @@ from dataclasses import dataclass
 
 @dataclass
 class ApplicatonConfig:
+    theme: str = "light"
+    node_text_size: int = 14
+    transition_text_size: int = 18
     node_radius: int = 30
     transition_arc_radius: int = 25
     selection_color: str = "#333381"
@@ -10,4 +13,3 @@ class ApplicatonConfig:
     start_node_color: str = "#75bf75"
     final_node_color: str = "#cf6b6b"
     start_final_node_color: str = "#b97bb9"
-

@@ -47,7 +47,7 @@ def draw_nodes(app: Application) -> None:
         text = canvas.Text(
             x=node.x, y=node.y,
             text=node.name,
-            style=TextStyle(weight=FontWeight.BOLD, color=Colors.BLACK),
+            style=TextStyle(size=app.config.node_text_size, weight=FontWeight.BOLD, color=Colors.BLACK),
             alignment=ft.alignment.center
         )
         elements.append(text)
@@ -81,7 +81,7 @@ def is_line_intersecting_node(start: Vector2D, end: Vector2D, app: Application) 
                 
     return False
 
-def calc_self_line(symbols: str, paint: ft.Paint, point: Vector2D, node_radius: float, taken: Set[float]) -> List:
+def calc_self_line(symbols: str, paint: ft.Paint, point: Vector2D, node_radius: float, taken: Set[float], text_size: int) -> List:
     arc_radius = 5/6 * node_radius
 
     taken = sorted(taken)
@@ -147,13 +147,13 @@ def calc_self_line(symbols: str, paint: ft.Paint, point: Vector2D, node_radius: 
         canvas.Text(
             x=text_position.x, y=text_position.y,
             text=symbols,
-            style=TextStyle(size=18, weight=FontWeight.BOLD, color=paint.color),
+            style=TextStyle(size=text_size, weight=FontWeight.BOLD, color=paint.color),
             alignment=ft.alignment.center,
             rotate=text_rotation
         )
     ]
 
-def calc_curved_line(symbols: str, paint: ft.Paint, start: Vector2D, end: Vector2D, node_radius: float) -> list:
+def calc_curved_line(symbols: str, paint: ft.Paint, start: Vector2D, end: Vector2D, node_radius: float, text_size: int) -> list:
     dir = (end - start).normalized()
     perp = dir.perpendicular()
     
@@ -197,13 +197,13 @@ def calc_curved_line(symbols: str, paint: ft.Paint, start: Vector2D, end: Vector
         canvas.Text(
             x=text_position.x, y=text_position.y,
             text=symbols,
-            style=TextStyle(size=18, weight=FontWeight.BOLD, color=paint.color),
+            style=TextStyle(size=text_size, weight=FontWeight.BOLD, color=paint.color),
             alignment=ft.alignment.center,
             rotate=text_rotation
         )
     ]
 
-def calc_line(symbols: str, paint: ft.Paint, start: Vector2D, end: Vector2D, double: bool, node_radius: float) -> List:
+def calc_line(symbols: str, paint: ft.Paint, start: Vector2D, end: Vector2D, double: bool, node_radius: float, text_size: int) -> List:
     dir = (end - start).normalized()
     line_start = start
     line_end = end
@@ -246,7 +246,7 @@ def calc_line(symbols: str, paint: ft.Paint, start: Vector2D, end: Vector2D, dou
         canvas.Text(
             x=text_position.x, y=text_position.y,
             text=symbols,
-            style=TextStyle(size=18, weight=FontWeight.BOLD, color=paint.color),
+            style=TextStyle(size=text_size, weight=FontWeight.BOLD, color=paint.color),
             alignment=ft.alignment.center,
             rotate=text_rotation
         )
@@ -260,7 +260,7 @@ def calc_transitions(app) -> List:
         end_p = Vector2D.from_node(transition.end)
 
         is_selected = app.graph.selected_transition == transition
-        line_color = app.config.selection_color if is_selected else "#000000"
+        line_color = app.config.selection_color if is_selected else ("#e5e7eb" if app.config.theme == "dark" else "#000000")
         line_width = 3 if is_selected else 2
 
         if transition.start == transition.end:
@@ -281,7 +281,8 @@ def calc_transitions(app) -> List:
                 ft.Paint(line_color, stroke_width=line_width),
                 start_p,
                 app.config.node_radius,
-                out_phis | in_phis
+                out_phis | in_phis,
+                app.config.transition_text_size
             )
             continue
 
@@ -296,7 +297,8 @@ def calc_transitions(app) -> List:
                 transition.symbols,
                 ft.Paint(line_color, stroke_width=line_width),
                 start_p, end_p,
-                app.config.node_radius
+                app.config.node_radius,
+                app.config.transition_text_size
             )
         else:
             elements += calc_line(
@@ -304,7 +306,8 @@ def calc_transitions(app) -> List:
                 ft.Paint(line_color, stroke_width=line_width),
                 start_p, end_p,
                 double,
-                app.config.node_radius
+                app.config.node_radius,
+                app.config.transition_text_size
             )
 
     return elements
