@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-from flet import Text, TextField, ElevatedButton, AlertDialog, Row, MainAxisAlignment
+from flet import Text, TextField, Button, AlertDialog, Row, MainAxisAlignment
 from automata_operations import import_automaton_data
 from automata.fa.nfa import NFA
 from automata.fa.dfa import DFA
 from application_state import EPSILON_SYMBOL
 from graph import Node, Transition
-
 
 
 def rename_state_dialog(node: Node, app: Application) -> AlertDialog:
@@ -15,7 +14,7 @@ def rename_state_dialog(node: Node, app: Application) -> AlertDialog:
         new_name = input_field.value.strip()
         if new_name == "" or new_name in map(lambda node: node.name, app.graph.nodes):
             app.ui.status_text.value = "Некорректное или занятое имя!" # TODO: MAKE MORE AGRESSIVE
-            app.page.close(dialog)
+            app.page.pop_dialog()
             app.page.update()
             return
 
@@ -24,14 +23,14 @@ def rename_state_dialog(node: Node, app: Application) -> AlertDialog:
         node.name = new_name
 
         app.draw.update_node(node)
-        app.page.close(dialog)
+        app.page.pop_dialog()
         app.page.update()
 
     input_field = TextField(label="Новое имя", value=node.name, autofocus=True, on_submit=on_submit)
     dialog = AlertDialog(
         title=Text(f"Переименовать {node.name}"),
         content=input_field,
-        actions=[ElevatedButton("OK", on_click=on_submit)]
+        actions=[Button("OK", on_click=on_submit)]
     )
     return dialog
 
@@ -52,7 +51,7 @@ def edit_transition_dialog(transition: Transition, app: Application) -> AlertDia
             app.ui.alphabet_display.value = f"Алфавит: {', '.join(sorted(app.attr.alphabet))}"
 
         app.draw.update_transition(transition)
-        app.page.close(dialog)
+        app.page.pop_dialog()
         app.page.update()
 
     def set_epsilon(e):
@@ -68,8 +67,8 @@ def edit_transition_dialog(transition: Transition, app: Application) -> AlertDia
         on_submit=on_save
     )
 
-    epsilon_btn = ElevatedButton(
-        text=EPSILON_SYMBOL,
+    epsilon_btn = Button(
+        content=EPSILON_SYMBOL,
         on_click=set_epsilon,
         tooltip="Добавить эпсилон к символам перехода"
     )
@@ -84,7 +83,7 @@ def edit_transition_dialog(transition: Transition, app: Application) -> AlertDia
         title=Text(f"Изменить переход {transition.start.name} -> {transition.end.name}"),
         content=content_row,
         actions=[
-            ElevatedButton("Сохранить", on_click=on_save)
+            Button("Сохранить", on_click=on_save)
         ],
     )
     return dialog
@@ -94,9 +93,7 @@ def regex_input_dialog(app: Application) -> AlertDialog:
     def on_build(e):
         regex_str = input_field.value.strip()
         if not regex_str: return
-        app.page.close(dialog)
-
-        app.page.close(dialog)
+        app.page.pop_dialog()
 
         try:
             raw_nfa = NFA.from_regex(regex_str)
@@ -107,10 +104,10 @@ def regex_input_dialog(app: Application) -> AlertDialog:
                 title=Text("Ошибка синтаксиса"),
                 content=Text(f"Регулярное выражение '{regex_str}' содержит ошибки.\n{ex}"),
                 actions=[
-                    ElevatedButton("OK", on_click=lambda e: app.page.close(error_dialog)),
+                    Button("OK", on_click=lambda e: app.page.pop_dialog()),
                 ],
             )
-            app.page.open(error_dialog)
+            app.page.show_dialog(error_dialog)
         else:
             app.attr.regex = regex_str
             app.ui.regex_display.value = f"Регулярное выражение: {regex_str}"
@@ -135,8 +132,8 @@ def regex_input_dialog(app: Application) -> AlertDialog:
         title=Text("Построение автомата из регулярного выражения"),
         content=input_field,
         actions=[
-            ElevatedButton("Отмена", on_click=lambda e: app.page.close(dialog)),
-            ElevatedButton("Построить", on_click=on_build),
+            Button("Отмена", on_click=lambda e: app.page.pop_dialog()),
+            Button("Построить", on_click=on_build),
         ],
         actions_alignment=MainAxisAlignment.END,
     )

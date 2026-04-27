@@ -2,12 +2,12 @@ import flet as ft
 from flet import (
     Text,
     AppBar,
-    ElevatedButton,
+    Button,
     Column,
     Row,
     Container,
     Colors,
-    alignment,
+    Alignment,
     CrossAxisAlignment,
     MainAxisAlignment,
     GestureDetector,
@@ -54,27 +54,23 @@ class Application:
 
     def build_page(self):
         from interaction_events import (
-            handle_open_file_result,
-            handle_save_file_result,
             request_file_open,
             request_file_save
         )
-        self.ui.open_file_picker = FilePicker(on_result=lambda e: handle_open_file_result(e, self))
-        self.ui.save_file_picker = FilePicker(on_result=lambda e: handle_save_file_result(e, self))
-        self.page.overlay.append(self.ui.open_file_picker)
-        self.page.overlay.append(self.ui.save_file_picker)
+        self.ui.open_file_picker = FilePicker()
+        self.ui.save_file_picker = FilePicker()
 
-        self.ui.debug_step_back_btn = ElevatedButton(
+        self.ui.debug_step_back_btn = Button(
             "← Шаг назад",
             on_click=lambda e: debug.debug_step_back(self),
             bgcolor=Colors.AMBER_100
         )
-        self.ui.debug_step_forward_btn = ElevatedButton(
+        self.ui.debug_step_forward_btn = Button(
             "Шаг вперед →",
             on_click=lambda e: debug.debug_step_forward(self),
             bgcolor=Colors.GREEN_100
         )
-        self.ui.debug_continue_btn = ElevatedButton(
+        self.ui.debug_continue_btn = Button(
             "Продолжить",
             on_click=lambda e: debug.debug_continue(self),
             bgcolor=Colors.BLUE_100
@@ -100,6 +96,13 @@ class Application:
             visible=False  # Изначально скрыт
         )
 
+        async def file_open_wrapper(e):
+            await request_file_open(self)
+
+        async def file_save_wrapper(e):
+            print("CLICKED")
+            await request_file_save(self)
+
         self.page.appbar = AppBar(
             bgcolor=Colors.BLUE_GREY_900,
             toolbar_height=48,
@@ -107,21 +110,21 @@ class Application:
                 PopupMenuButton(
                     content=Text("Файл", color=Colors.WHITE, weight="bold"),
                     items=[
-                        PopupMenuItem(text="Открыть файл", on_click=lambda e: request_file_open(self)),
-                        PopupMenuItem(text="Сохранить файл", on_click=lambda e: request_file_save(self)),
+                        PopupMenuItem(content="Открыть файл", on_click=file_open_wrapper),
+                        PopupMenuItem(content="Сохранить файл", on_click=file_save_wrapper),
                     ],),
-                ElevatedButton(
+                Button(
                     "Undo",
                     on_click=lambda e: self.history.undo_click(self)
                 ),
-                ElevatedButton(
+                Button(
                     "Redo",
                     on_click=lambda e: self.history.redo_click(self)
                 )]),
             center_title=False,
             actions=[
                 self.ui.debug_panel,  # Теперь точно не None
-                ElevatedButton(
+                Button(
                     "Отладка",
                     on_click=lambda e: debug.toggle_debug_mode(self),
                     bgcolor=Colors.YELLOW_100
@@ -152,7 +155,7 @@ class Application:
             height=self.attr.canvas_height,
             bgcolor=Colors.WHITE,
             border_radius=10,
-            alignment=alignment.center,
+            alignment=Alignment.CENTER,
         )
         self.ui.canvas_container = canvas_container
 
@@ -170,7 +173,7 @@ class Application:
                 content=self.ui.word_input,
                 expand=True,
             ),
-            ElevatedButton("Обработать слово", on_click=lambda e: interaction_events.handle_run(self))],
+            Button("Обработать слово", on_click=lambda e: interaction_events.handle_run(self))],
             spacing=10,
             vertical_alignment=CrossAxisAlignment.CENTER,
         )
@@ -179,7 +182,7 @@ class Application:
             Text("Визуальный автомат (NFA)", size=24, weight="bold", color=Colors.BLACK),
             Container(
                 content=gesture_area,
-                alignment=alignment.center,
+                alignment=Alignment.CENTER,
             ),
             Column([
                 self.ui.mode_status,
@@ -195,7 +198,7 @@ class Application:
             content=Column([
                 Container(
                     content=top_content,
-                    alignment=alignment.top_center,
+                    alignment=Alignment.TOP_CENTER,
                 ),
                 Container(expand=True),
                 input_row],
@@ -225,67 +228,67 @@ class Application:
                     horizontal_alignment=CrossAxisAlignment.STRETCH,
                 ),
                 padding=16,
-                border=ft.border.only(
+                border=ft.Border.only(
                     bottom=ft.border.BorderSide(1, Colors.BLUE_GREY_100)
                 ) if show_divider else None,
             )
 
-        delete_button = ElevatedButton(
+        delete_button = Button(
             "Удалить",
             on_click=lambda e: edit_events.handle_delete(self)
         )
-        place_mode_button = ElevatedButton(
+        place_mode_button = Button(
             "Режим добавления состояний",
             on_click=lambda e: edit_events.toggle_placing_mode(self)
         )
-        transition_mode_button = ElevatedButton(
+        transition_mode_button = Button(
             "Режим добавления переходов",
             on_click=lambda e: edit_events.toggle_transition_mode(self)
         )
-        start_button = ElevatedButton(
+        start_button = Button(
             "Переключить начальное состояние",
             on_click=lambda e: edit_events.toggle_start_state(self)
         )
-        final_button = ElevatedButton(
+        final_button = Button(
             "Переключить конечное состояние",
             on_click=lambda e: edit_events.toggle_final_state(self)
         )
-        add_alphabet_button = ElevatedButton(
+        add_alphabet_button = Button(
             "Добавить",
             on_click=lambda e: edit_events.add_alphabet_symbols(self)
         )
-        remove_alphabet_button = ElevatedButton(
+        remove_alphabet_button = Button(
             "Удалить",
             on_click=lambda e: edit_events.remove_alphabet_symbols(self)
         )
-        clear_button = ElevatedButton(
+        clear_button = Button(
             "Очистить автомат",
             on_click=lambda e: edit_events.clear_automaton(self)
         )
-        regex_button = ElevatedButton(
+        regex_button = Button(
             "Построить из регулярного выражения",
-            on_click=lambda e: self.page.open(dialog_handlers.regex_input_dialog(self))
+            on_click=lambda e: self.page.show_dialog(dialog_handlers.regex_input_dialog(self))
         )
-        regex_from_automaton_button = ElevatedButton(
+        regex_from_automaton_button = Button(
             "Преобразовать в регулярное выражение",
             on_click=lambda e: interaction_events.handle_convert_to_regex(self)
         )
-        optimize_button = ElevatedButton(
+        optimize_button = Button(
             "Оптимизировать (Min DFA)",
             on_click=lambda e: automaton_optimization.handle_optimize_click(self),
             bgcolor=Colors.GREEN_100,
             color=Colors.GREEN_900
         )
-        table_editor_button = ElevatedButton(
+        table_editor_button = Button(
             "Редактор таблицы",
             on_click=lambda e: open_table_editor(self)
         )
-        zoom_out_button = ElevatedButton(
+        zoom_out_button = Button(
             "-",
             on_click=lambda e: edit_events.zoom_canvas_out(self),
             width=44
         )
-        zoom_in_button = ElevatedButton(
+        zoom_in_button = Button(
             "+",
             on_click=lambda e: edit_events.zoom_canvas_in(self),
             width=44
@@ -341,7 +344,7 @@ class Application:
                 horizontal_alignment=CrossAxisAlignment.STRETCH,
             ),
             bgcolor=Colors.WHITE,
-            padding=ft.padding.only(top=20, bottom=20),
+            padding=ft.Padding.only(top=20, bottom=20),
             width=450,
         )
 

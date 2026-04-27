@@ -1,4 +1,4 @@
-from flet import Colors, Text, TextField, canvas, ElevatedButton, Container, Slider
+from flet import Colors, Text, TextField, canvas, Button, Container, Slider
 from dataclasses import dataclass, field
 from typing import Set
 
@@ -42,9 +42,9 @@ class ApplicationUI:
     open_file_picker = None
     save_file_picker = None
 
-    debug_step_back_btn = ElevatedButton("Назад")
-    debug_step_forward_btn = ElevatedButton("Вперед")
-    debug_continue_btn = ElevatedButton("Продолжить")
+    debug_step_back_btn = Button("Назад")
+    debug_step_forward_btn = Button("Вперед")
+    debug_continue_btn = Button("Продолжить")
     debug_status_text = Text("")
     debug_panel = Container(visible=False)
 

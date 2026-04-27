@@ -57,7 +57,7 @@ def open_table_editor(app):
 
     def add_row(e):
         if len(states) >= 10:
-            app.page.open(ft.AlertDialog(title=ft.Text("Лимит достигнут"), content=ft.Text("Максимальное количество состояний: 10")))
+            app.page.show_dialog(ft.AlertDialog(title=ft.Text("Лимит достигнут"), content=ft.Text("Максимальное количество состояний: 10")))
             return
         new_name = f"q{len(states)}"
         while new_name in states:
@@ -68,7 +68,7 @@ def open_table_editor(app):
 
     def add_column(e):
         if len(symbols) >= 10:
-            app.page.open(ft.AlertDialog(title=ft.Text("Лимит достигнут"), content=ft.Text("Максимальное количество символов: 10")))
+            app.page.show_dialog(ft.AlertDialog(title=ft.Text("Лимит достигнут"), content=ft.Text("Максимальное количество символов: 10")))
             return
         base_syms = [s for s in symbols if s != EPSILON_SYMBOL]
         new_sym = chr(ord(base_syms[-1]) + 1) if base_syms else 'a'
@@ -127,7 +127,7 @@ def open_table_editor(app):
         app.ui.alphabet_display.value = f"Алфавит: {', '.join(sorted(app.attr.alphabet))}"
 
         app.draw.redraw()
-        app.page.close(dialog)
+        app.page.pop_dialog()
         app.ui.status_text.value = "Таблица применена"
         app.page.update()
 
@@ -137,8 +137,8 @@ def open_table_editor(app):
         content=ft.Container(
             content=ft.Column([
                 ft.Row([
-                    ft.ElevatedButton("Добавить строку", on_click=add_row, icon=ft.Icons.ADD),
-                    ft.ElevatedButton("Добавить столбец", on_click=add_column, icon=ft.Icons.ADD),
+                    ft.Button("Добавить строку", on_click=add_row, icon=ft.Icons.ADD),
+                    ft.Button("Добавить столбец", on_click=add_column, icon=ft.Icons.ADD),
                 ]),
                 ft.Text("Введите целевые состояния через запятую."),
                 table_holder,
@@ -147,8 +147,8 @@ def open_table_editor(app):
             height=500, 
         ),
         actions=[
-            ft.ElevatedButton("Отмена", on_click=lambda e: app.page.close(dialog)),
-            ft.ElevatedButton("Применить", on_click=apply_changes),
+            ft.Button("Отмена", on_click=lambda e: app.page.pop_dialog()),
+            ft.Button("Применить", on_click=apply_changes),
         ],
     )
-    app.page.open(dialog)
+    app.page.show_dialog(dialog)

@@ -7,32 +7,29 @@ from linal import Vector2D, dot_product
 from graph import NodeType, Graph, Node, Transition
 from typing import Set, List
 from copy import deepcopy
+from time import monotonic_ns
 
 
 class Draw:
     def __init__(self, app):
         self.app = app
         self.shapes = {}
+        self.last_update = 0
+        self.fps = 67
 
     def update_node(self, node: Node):
-        related_transitons = [
-            transition
-            for transition in self.shapes
-            if isinstance(transition, Transition) and
-            (transition.start == node or transition.end == node)]
-        for transition in related_transitons:
-            self.update_transition(transition)
-
         if node not in self.app.graph.nodes:
             for shape in self.shapes.pop(node, []):
                 self.app.ui.drawing_area.shapes.remove(shape)
             self.app.ui.drawing_area.update()
+            self.update_related_transitions(node)
             return
 
         if node not in self.shapes:
             self.shapes[node] = self.render_node(node)
             self.app.ui.drawing_area.shapes.extend(self.shapes[node])
             self.app.ui.drawing_area.update()
+            self.update_related_transitions(node)
             return
 
         new_shapes = self.render_node(node)
@@ -42,7 +39,12 @@ class Draw:
             self.shapes[node] = self.render_node(node)
             self.app.ui.drawing_area.shapes.extend(self.shapes[node])
             self.app.ui.drawing_area.update()
+            self.update_related_transitions(node)
             return
+
+        if monotonic_ns() - self.last_update < 1_000_000_000 / self.fps:
+            return
+        self.last_update = monotonic_ns()
 
         for i in range(len(new_shapes)):
             if type(new_shapes[i]) is canvas.Circle:
@@ -53,11 +55,22 @@ class Draw:
             elif type(new_shapes[i]) is canvas.Text:
                 self.shapes[node][i].x = new_shapes[i].x
                 self.shapes[node][i].y = new_shapes[i].y
-                self.shapes[node][i].text = new_shapes[i].text
+                self.shapes[node][i].value = new_shapes[i].value
                 self.shapes[node][i].style = new_shapes[i].style
                 self.shapes[node][i].alignment = new_shapes[i].alignment
 
             self.shapes[node][i].update()
+
+        self.update_related_transitions(node)
+
+    def update_related_transitions(self, node: Node):
+        related_transitons = [
+            transition
+            for transition in self.shapes
+            if isinstance(transition, Transition) and
+            (transition.start == node or transition.end == node)]
+        for transition in related_transitons:
+            self.update_transition(transition)
 
     def update_transition(self, transition: Transition):
         if transition not in self.app.graph.transitions:
@@ -66,7 +79,7 @@ class Draw:
             self.app.ui.drawing_area.update()
             return
 
-        if transition not in self.shapes:
+        if transition not in self.shapes.keys():
             self.shapes[transition] = self.render_transition(transition)
             self.app.ui.drawing_area.shapes.extend(self.shapes[transition])
             self.app.ui.drawing_area.update()
@@ -83,20 +96,20 @@ class Draw:
             return
 
         for i in range(len(new_shapes)):
-            if type(new_shapes[i]) is canvas.Line:
+            if isinstance(new_shapes[i], canvas.Line):
                 self.shapes[transition][i].x1 = new_shapes[i].x1
                 self.shapes[transition][i].y1 = new_shapes[i].y1
                 self.shapes[transition][i].x2 = new_shapes[i].x2
                 self.shapes[transition][i].y2 = new_shapes[i].y2
                 self.shapes[transition][i].paint = new_shapes[i].paint
-            elif type(new_shapes[i]) is canvas.Text:
+            elif isinstance(new_shapes[i], canvas.Text):
                 self.shapes[transition][i].x = new_shapes[i].x
                 self.shapes[transition][i].y = new_shapes[i].y
-                self.shapes[transition][i].text = new_shapes[i].text
+                self.shapes[transition][i].value = new_shapes[i].value
                 self.shapes[transition][i].style = new_shapes[i].style
                 self.shapes[transition][i].alignment = new_shapes[i].alignment
                 self.shapes[transition][i].rotate = new_shapes[i].rotate
-            elif type(new_shapes[i]) is canvas.Arc:
+            elif isinstance(new_shapes[i], canvas.Arc):
                 self.shapes[transition][i].x = new_shapes[i].x
                 self.shapes[transition][i].y = new_shapes[i].y
                 self.shapes[transition][i].width = new_shapes[i].width
@@ -104,10 +117,12 @@ class Draw:
                 self.shapes[transition][i].paint = new_shapes[i].paint
                 self.shapes[transition][i].start_angle = new_shapes[i].start_angle
                 self.shapes[transition][i].sweep_angle = new_shapes[i].sweep_angle
-            elif type(new_shapes[i]) is canvas.Path:
+            elif isinstance(new_shapes[i], canvas.Path):
                 self.shapes[transition][i].elements = new_shapes[i].elements
                 self.shapes[transition][i].paint = new_shapes[i].paint
 
+            if not self.shapes[transition][i].page:
+                print(self.shapes[transition])
             self.shapes[transition][i].update()
 
     def redraw(self):
@@ -158,9 +173,9 @@ class Draw:
 
         text = canvas.Text(
             x=node.x, y=node.y,
-            text=node.name,
+            value=node.name,
             style=TextStyle(weight=FontWeight.BOLD, color=Colors.BLACK),
-            alignment=ft.alignment.center
+            alignment=ft.Alignment.CENTER
         )
         elements.append(text)
 
@@ -310,9 +325,9 @@ def calc_self_line(symbols: str, paint: ft.Paint, point: Vector2D, node_radius: 
         ),
         canvas.Text(
             x=text_position.x, y=text_position.y,
-            text=symbols,
+            value=symbols,
             style=TextStyle(size=18, weight=FontWeight.BOLD, color=paint.color),
-            alignment=ft.alignment.center,
+            alignment=ft.Alignment.CENTER,
             rotate=text_rotation
         )
     ]
@@ -360,12 +375,13 @@ def calc_curved_line(symbols: str, paint: ft.Paint, start: Vector2D, end: Vector
         ),
         canvas.Text(
             x=text_position.x, y=text_position.y,
-            text=symbols,
+            value=symbols,
             style=TextStyle(size=18, weight=FontWeight.BOLD, color=paint.color),
-            alignment=ft.alignment.center,
+            alignment=ft.Alignment.CENTER,
             rotate=text_rotation
         )
     ]
+
 
 def calc_line(symbols: str, paint: ft.Paint, start: Vector2D, end: Vector2D, double: bool, node_radius: float) -> List:
     dir = (end - start).normalized()
@@ -409,9 +425,9 @@ def calc_line(symbols: str, paint: ft.Paint, start: Vector2D, end: Vector2D, dou
         ),
         canvas.Text(
             x=text_position.x, y=text_position.y,
-            text=symbols,
+            value=symbols,
             style=TextStyle(size=18, weight=FontWeight.BOLD, color=paint.color),
-            alignment=ft.alignment.center,
+            alignment=ft.Alignment.CENTER,
             rotate=text_rotation
         )
     ]

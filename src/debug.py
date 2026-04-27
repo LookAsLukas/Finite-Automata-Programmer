@@ -1,5 +1,5 @@
 import flet as ft
-from flet import Row, ElevatedButton, Container, Colors
+from flet import Row, Button, Container, Colors
 from time import sleep
 from automata_operations import build_nfa_from_ui
 from fap import Application
@@ -220,7 +220,7 @@ def check_acceptance(app: Application):
     dialog = ft.AlertDialog(
         title=ft.Text("Результат"),
         content=ft.Text(result_text),
-        actions=[ft.ElevatedButton("OK", on_click=lambda e: app.page.close(dialog))]
+        actions=[ft.Button("OK", on_click=lambda e: app.page.pop_dialog())]
     )
-    app.page.open(dialog)
+    app.page.show_dialog(dialog)
     app.page.update()

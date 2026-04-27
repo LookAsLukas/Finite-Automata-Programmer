@@ -6,7 +6,7 @@ from linal import Vector2D
 
 
 def _event_point(e) -> Vector2D:
-    return Vector2D(e.local_x, e.local_y)
+    return Vector2D(e.local_position.x, e.local_position.y)
 
 
 def _is_inside_canvas(point: Vector2D, app: Application) -> bool:
@@ -108,13 +108,13 @@ def handle_double_click(e, app: Application) -> None:
     clicked_node = get_clicked_node(click, app)
     if clicked_node is not None:
         dialog = rename_state_dialog(clicked_node, app)
-        app.page.open(dialog)
+        app.page.show_dialog(dialog)
         return
 
     clicked_transition = get_clicked_transition(click, app)
     if clicked_transition is not None:
         dialog = edit_transition_dialog(clicked_transition, app)
-        app.page.open(dialog)
+        app.page.show_dialog(dialog)
 
 
 def handle_drag_start(e, app: Application) -> None:

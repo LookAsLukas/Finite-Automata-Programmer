@@ -114,27 +114,20 @@ def import_automaton_from_path(file_path: str, app: Application) -> None:
         app.page.update()
 
 
-def request_file_open(app: Application) -> None:
+async def request_file_open(app: Application) -> None:
     """Открывает диалог выбора файла для импорта автомата."""
     if app.ui.open_file_picker is None:
-        app.ui.open_file_picker = FilePicker(on_result=lambda e: handle_open_file_result(e, app))
+        app.ui.open_file_picker = FilePicker()
         app.page.overlay.append(app.ui.open_file_picker)
 
-    app.ui.open_file_picker.pick_files(allow_multiple=False, allowed_extensions=["json"])
-
-
-def handle_open_file_result(e, app: Application) -> None:
-    """Обрабатывает выбранный в диалоге файл импорта."""
-    if not e.files:
-        app.ui.status_text.value = "Выбор файла отменен"
-        app.page.update()
+    picked = await app.ui.open_file_picker.pick_files(allow_multiple=False, allowed_extensions=["json"])
+    if len(picked) == 0 or picked[0] is None:
         return
 
-    file_path = e.files[0].path
-    import_automaton_from_path(file_path, app)
+    import_automaton_from_path(picked[0].path, app)
 
 
-def request_file_save(app: Application) -> None:
+async def request_file_save(app: Application) -> None:
     """Открывает диалог сохранения автомата в файл."""
     error_message = _get_automaton_export_error(app)
     if error_message:
@@ -143,17 +136,13 @@ def request_file_save(app: Application) -> None:
         return
 
     if app.ui.save_file_picker is None:
-        app.ui.save_file_picker = FilePicker(on_result=lambda e: handle_save_file_result(e, app))
+        app.ui.save_file_picker = FilePicker()
         app.page.overlay.append(app.ui.save_file_picker)
 
-    app.ui.save_file_picker.save_file(file_name="nfa.json", allowed_extensions=["json"])
-
-
-def handle_save_file_result(e, app: Application) -> None:
-    """Обрабатывает выбранный путь для сохранения автомата."""
-    if not e.path:
-        app.ui.status_text.value = "Сохранение отменено"
-        app.page.update()
+    path = await app.ui.save_file_picker.save_file(file_name="nfa.json", allowed_extensions=["json"])
+    print(path)
+    if path is None:
         return
 
-    export_nfa_to_path(e.path, app)
+    export_nfa_to_path(path, app)
+
