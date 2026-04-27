@@ -29,7 +29,7 @@ def automaton_to_graph(automaton: NFA, app: Application) -> Graph:
     igraph.add_vertices(nodes)
     igraph.add_edges(transitions)
     try:
-        coords = graph.layout_fruchterman_reingold().coords
+        coords = igraph.layout_fruchterman_reingold().coords
     except Exception:
         coords = [
             Vector2D.from_phi_r(i / len(nodes) * 2 * math.pi, 1).to_tuple()
