@@ -1,5 +1,4 @@
 import flet as ft
-from automata_operations import build_nfa_from_ui
 from graph import Transition, Node
 from application_state import EPSILON_SYMBOL
 
@@ -8,25 +7,30 @@ CHELKA = 450
 class TableEditor:
     def __init__(self, app):
         self.app = app
-        self.states = sorted([str(nd.name) for nd in app.graph.nodes if nd.name != ""], key=str)
-        self.symbols = sorted(list(app.attr.alphabet))
-        
-        has_epsilon = any('' == tr.symbols for tr in app.graph.transitions)
-        if has_epsilon and EPSILON_SYMBOL not in self.symbols:
-            self.symbols.append(EPSILON_SYMBOL)
-
-        self.cell_fields = {}
         self.table_holder = ft.Column(scroll=ft.ScrollMode.ADAPTIVE)
         self.table_sheet = None
 
+    def get_states(self):
+        return sorted([str(nd.name) for nd in self.app.graph.nodes if nd.name != ""], key=str)
+
+    def get_symbols(self):
+        syms = sorted(list(self.app.attr.alphabet))
+        has_epsilon = False
+        for tr in self.app.graph.transitions:
+            if EPSILON_SYMBOL in tr.symbols or tr.symbols == '':
+                has_epsilon = True
+                break
+        if has_epsilon and EPSILON_SYMBOL not in syms:
+            syms.append(EPSILON_SYMBOL)
+        return syms
+
     def get_transition_map(self):
-        """Оптимизированный сбор переходов в словарь."""
         tr_map = {}
         for tr in self.app.graph.transitions:
             start_name = str(tr.start.name)
-            syms_in_transition = ['' if s == '' else s for s in tr.symbols] if isinstance(tr.symbols, (list, set)) else [tr.symbols]
+            if not start_name: continue 
             
-            for sym in syms_in_transition:
+            for sym in tr.symbols:
                 ui_sym = EPSILON_SYMBOL if sym == '' else sym
                 key = (start_name, ui_sym)
                 if key not in tr_map:
@@ -35,87 +39,148 @@ class TableEditor:
         return tr_map
 
     def build_table_ui(self):
-        """Отрисовка таблицы без подсказок."""
+        states = self.get_states()
+        symbols = self.get_symbols()
         tr_map = self.get_transition_map()
         
-        columns = [ft.DataColumn(ft.Text("Состояние"))] + [
+        columns = [ft.DataColumn(ft.Text("Состояние", weight="bold", color = "black"))] + [
             ft.DataColumn(
                 ft.GestureDetector(
-                    content=ft.Text(sym, weight=ft.FontWeight.BOLD),
+                    content=ft.Text(sym, weight=ft.FontWeight.BOLD, color="blue"),
                     on_double_tap=lambda e, s=sym: self.edit_label(False, s)
                 )
-            ) for sym in self.symbols
+            ) for sym in symbols
         ]
 
         rows = []
-        for state in self.states:
+        for state in states:
             cells = [
                 ft.DataCell(
                     ft.GestureDetector(
-                        content=ft.Text(state, weight=ft.FontWeight.BOLD),
+                        content=ft.Text(state, weight=ft.FontWeight.BOLD, color="blue"),
                         on_double_tap=lambda e, s=state: self.edit_label(True, s)
                     )
                 )
             ]
             
-            for sym in self.symbols:
+            for sym in symbols:
                 targets = tr_map.get((state, sym), [])
                 existing_val = ", ".join(sorted(targets, key=str))
-                
-                if (state, sym) in self.cell_fields:
-                    existing_val = self.cell_fields[(state, sym)].value
 
-                tf = ft.TextField(
-                    value=existing_val,
-                    # hint_text удален
-                    width=100,
-                    height=40,
-                    text_align=ft.TextAlign.CENTER,
-                    content_padding=5
+                cells.append(
+                    ft.DataCell(
+                        ft.GestureDetector(
+                            content=ft.Container(
+                                content=ft.Text(existing_val if existing_val else "—", color="black" if existing_val else "grey"),
+                                width=100, height=45, alignment=ft.alignment.center,
+                                bgcolor="#f8fafc" if existing_val else "white",
+                                border_radius=5
+                            ),
+                            on_double_tap=lambda e, sf=state, sm=sym, ev=existing_val: self.edit_cell(sf, sm, ev)
+                        )
+                    )
                 )
-                self.cell_fields[(state, sym)] = tf
-                cells.append(ft.DataCell(ft.Container(content=tf, width=100, height=45)))
             
             rows.append(ft.DataRow(cells=cells))
 
         self.table_holder.controls = [
-            ft.Row(
-                controls=[
-                    ft.DataTable(
-                        columns=columns,
-                        rows=rows,
-                        border=ft.border.all(1, "black"),
-                        horizontal_lines=ft.border.BorderSide(1, "grey"),
-                        vertical_lines=ft.border.BorderSide(1, "grey"),
-                        data_row_min_height=60,
-                        data_row_max_height=60,
-                    )
-                ],
-                scroll=ft.ScrollMode.ADAPTIVE
-            )
+            ft.Row([
+                ft.DataTable(
+                    columns=columns, rows=rows,
+                    border=ft.border.all(1, "#EEEEEE"),
+                    horizontal_lines=ft.border.BorderSide(1, "#EEEEEE"),
+                    vertical_lines=ft.border.BorderSide(1, "#EEEEEE"),
+                )
+            ], scroll=ft.ScrollMode.ADAPTIVE)
         ]
+
+    def edit_cell(self, state_from, symbol, current_val):
+        edit_tf = ft.TextField(value=current_val, autofocus=True, label=f"Куда ведет '{symbol}' из {state_from}?")
+        
+        def save_cell(e):
+            new_val = edit_tf.value.strip()
+            self.app.history.add(self.app.graph)
+            
+            start_node = next((n for n in self.app.graph.nodes if str(n.name) == state_from), None)
+            if not start_node: return
+
+            for tr in list(self.app.graph.transitions):
+                if tr.start == start_node:
+                    if symbol in tr.symbols:
+                        tr.symbols = tr.symbols.replace(symbol, "")
+                    elif symbol == EPSILON_SYMBOL and tr.symbols == '':
+                        tr.symbols = ''
+                    
+                    if not tr.symbols:
+                        self.app.graph.transitions.remove(tr)
+
+            if new_val and new_val not in ["-", "—"]:
+                targets = [t.strip() for t in new_val.split(",") if t.strip()]
+                for t_name in targets:
+                    end_node = next((n for n in self.app.graph.nodes if str(n.name) == t_name), None)
+                    if not end_node:
+                        self.app.ui.status_text.value = f"Ошибка: Состояния '{t_name}' не существует"
+                        self.app.page.update()
+                        continue
+                        
+                    existing_tr = next((tr for tr in self.app.graph.transitions if tr.start == start_node and tr.end == end_node), None)
+                    if existing_tr:
+                        if symbol not in existing_tr.symbols:
+                            existing_tr.symbols += symbol
+                    else:
+                        self.app.graph.transitions.add(Transition(start=start_node, end=end_node, symbols=symbol))
+            
+            self.app.page.close(edit_dialog)
+            self.update_canvas()
+            self.refresh_ui()
+
+        edit_dialog = ft.AlertDialog(
+            title=ft.Text("Изменить переходы (цели через запятую)"),
+            content=edit_tf,
+            actions=[
+                ft.TextButton("Отмена", on_click=lambda _: self.app.page.close(edit_dialog)),
+                ft.ElevatedButton("Сохранить", on_click=save_cell)
+            ],
+        )
+        self.app.page.open(edit_dialog)
 
     def edit_label(self, is_row, old_val):
         edit_tf = ft.TextField(value=old_val, autofocus=True)
         
         def save_label(e):
             new_val = edit_tf.value.strip()
-            if not new_val: return
+            if not new_val or new_val == old_val:
+                self.app.page.close(edit_dialog)
+                return
             
+            self.app.history.add(self.app.graph)
+
             if is_row:
-                idx = self.states.index(old_val)
-                self.states[idx] = new_val
-                for sym in self.symbols:
-                    if (old_val, sym) in self.cell_fields:
-                        self.cell_fields[(new_val, sym)] = self.cell_fields.pop((old_val, sym))
+                states = self.get_states()
+                if new_val in states: 
+                    self.app.page.close(edit_dialog)
+                    return
+                node = next((n for n in self.app.graph.nodes if str(n.name) == old_val), None)
+                if node: node.name = new_val
             else:
-                idx = self.symbols.index(old_val)
-                self.symbols[idx] = new_val
-                for state in self.states:
-                    if (state, old_val) in self.cell_fields:
-                        self.cell_fields[(state, new_val)] = self.cell_fields.pop((state, old_val))
-            
+                symbols = self.get_symbols()
+                if new_val in symbols: 
+                    self.app.page.close(edit_dialog)
+                    return
+                
+                if old_val in self.app.attr.alphabet:
+                    self.app.attr.alphabet.remove(old_val)
+                self.app.attr.alphabet.add(new_val)
+                
+                real_old = '' if old_val == EPSILON_SYMBOL else old_val
+                real_new = '' if new_val == EPSILON_SYMBOL else new_val
+                
+                for tr in self.app.graph.transitions:
+                    if real_old in tr.symbols:
+                        tr.symbols = tr.symbols.replace(real_old, real_new)
+
             self.app.page.close(edit_dialog)
+            self.update_canvas()
             self.refresh_ui()
 
         edit_dialog = ft.AlertDialog(
@@ -129,79 +194,69 @@ class TableEditor:
         self.app.page.open(edit_dialog)
 
     def add_row(self, e):
-        if len(self.states) >= 10: return
-        new_name = f"q{len(self.states)}"
-        while new_name in self.states:
-            new_name = f"q{int(new_name[1:]) + 1 if new_name[1:].isdigit() else len(self.states)}"
-        self.states.append(new_name)
+        states = self.get_states()
+        new_name = f"q{len(states)}"
+        while new_name in states:
+            new_name = f"q{int(new_name[1:]) + 1 if any(c.isdigit() for c in new_name) else len(states)}"
+        
+        self.app.history.add(self.app.graph)
+        from graph import Node
+        self.app.graph.nodes.add(Node(x=100 + len(states)*50, y=100 + len(states)*50, name=new_name))
+        self.update_canvas()
         self.refresh_ui()
 
     def delete_row(self, e):
-        if self.states:
-            last = self.states.pop()
-            keys_to_del = [k for k in self.cell_fields if k[0] == last]
-            for k in keys_to_del: self.cell_fields.pop(k)
+        states = self.get_states()
+        if states:
+            last = states[-1]
+            self.app.history.add(self.app.graph)
+            
+            node_to_del = next((n for n in self.app.graph.nodes if str(n.name) == last), None)
+            if node_to_del:
+                self.app.graph.nodes.remove(node_to_del)
+                for tr in list(self.app.graph.transitions):
+                    if tr.start == node_to_del or tr.end == node_to_del:
+                        self.app.graph.transitions.remove(tr)
+                        
+            self.update_canvas()
             self.refresh_ui()
 
     def add_column(self, e):
-        if len(self.symbols) >= 10: return
-        base_syms = [s for s in self.symbols if s != EPSILON_SYMBOL]
+        symbols = self.get_symbols()
+        base_syms = [s for s in symbols if s != EPSILON_SYMBOL]
         new_sym = chr(ord(base_syms[-1]) + 1) if base_syms else 'a'
-        if EPSILON_SYMBOL in self.symbols:
-            self.symbols.insert(self.symbols.index(EPSILON_SYMBOL), new_sym)
-        else:
-            self.symbols.append(new_sym)
-        self.refresh_ui()
-
-    def delete_column(self, e):
-        if self.symbols:
-            last = self.symbols.pop()
-            keys_to_del = [k for k in self.cell_fields if k[1] == last]
-            for k in keys_to_del: self.cell_fields.pop(k)
+        if new_sym not in self.app.attr.alphabet:
+            self.app.attr.alphabet.add(new_sym)
+            self.update_canvas()
             self.refresh_ui()
 
-    def apply_changes(self, e):
-        self.app.history.add(self.app.graph)
-        
-        for state in self.states:
-            for sym in self.symbols:
-                tf = self.cell_fields.get((state, sym))
-                if not tf or not tf.value.strip(): continue
-                targets = [t.strip() for t in tf.value.split(',') if t.strip()]
-                invalid = [t for t in targets if t not in self.states]
-                if invalid:
-                    self.app.ui.status_text.value = f"Ошибка: {invalid[0]} не существует"
-                    self.app.page.update()
-                    return
-
-        current_node_names = {n.name for n in self.app.graph.nodes}
-        for i, s_name in enumerate(self.states):
-            if s_name not in current_node_names:
-                self.app.graph.nodes.add(Node(x=150 + i*30, y=150 + i*30, name=s_name))
-
-        self.app.graph.transitions.clear()
-        pair_symbols = {}
-        for state in self.states:
-            for sym in self.symbols:
-                tf = self.cell_fields.get((state, sym))
-                if not tf or not tf.value.strip(): continue
+    def delete_column(self, e):
+        symbols = self.get_symbols()
+        if symbols:
+            last = symbols[-1]
+            if last == EPSILON_SYMBOL: return
+            
+            self.app.history.add(self.app.graph)
+            if last in self.app.attr.alphabet:
+                self.app.attr.alphabet.remove(last)
                 
-                nfa_sym = '' if sym == EPSILON_SYMBOL else sym
-                targets = [t.strip() for t in tf.value.split(',') if t.strip()]
-                for t in targets:
-                    pair_symbols.setdefault((state, t), set()).add(nfa_sym)
+            for tr in list(self.app.graph.transitions):
+                if last in tr.symbols:
+                    tr.symbols = tr.symbols.replace(last, "")
+                    if not tr.symbols:
+                        self.app.graph.transitions.remove(tr)
+                        
+            self.update_canvas()
+            self.refresh_ui()
 
-        for (start_n, end_n), sym_set in pair_symbols.items():
-            start_node = next(n for n in self.app.graph.nodes if n.name == start_n)
-            end_node = next(n for n in self.app.graph.nodes if n.name == end_n)
-            symbols_str = "".join(sorted(sym_set))
-            self.app.graph.transitions.add(Transition(start=start_node, end=end_node, symbols=symbols_str))
-
-        self.app.attr.alphabet = {s for s in self.symbols if s != EPSILON_SYMBOL}
-        from draw import draw_nodes
-        draw_nodes(self.app)
-        self.app.page.close(self.table_sheet)
-        self.app.ui.status_text.value = "Таблица применена"
+    def update_canvas(self):
+        if self.app.attr.alphabet:
+             self.app.ui.alphabet_display.value = f"Алфавит: {', '.join(sorted(self.app.attr.alphabet))}"
+        import draw
+        res = draw.draw_nodes(self.app)
+        if isinstance(res, list):
+            self.app.ui.drawing_area.shapes.clear()
+            self.app.ui.drawing_area.shapes.extend(res)
         self.app.page.update()
 
     def refresh_ui(self):
@@ -212,27 +267,26 @@ class TableEditor:
         self.build_table_ui()
         self.table_sheet = ft.BottomSheet(
             content=ft.Container(
-                padding=20,
+                padding=20, bgcolor=ft.Colors.WHITE,
                 content=ft.Column([
                     ft.Row([
-                        ft.Text("Редактор таблицы", size=20, weight="bold"),
+                        ft.Text("Редактор таблицы", size=20, weight="bold", color="black"),
                         ft.IconButton(ft.Icons.CLOSE, on_click=lambda _: self.app.page.close(self.table_sheet))
                     ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
-                    
                     ft.Row([
-                        ft.ElevatedButton("Строка +", on_click=self.add_row, icon=ft.Icons.ADD),
-                        ft.ElevatedButton("Строка -", on_click=self.delete_row, icon=ft.Icons.REMOVE, bgcolor=ft.Colors.RED_50),
+                        ft.ElevatedButton("Состояние ", on_click=self.add_row, icon=ft.Icons.ADD, color="white", bgcolor="blue"),
+                        ft.ElevatedButton("Состояние ", on_click=self.delete_row, icon=ft.Icons.REMOVE, color="red"),
                         ft.VerticalDivider(),
-                        ft.ElevatedButton("Столбец +", on_click=self.add_column, icon=ft.Icons.ADD_CIRCLE),
-                        ft.ElevatedButton("Столбец -", on_click=self.delete_column, icon=ft.Icons.REMOVE_CIRCLE, bgcolor=ft.Colors.RED_50),
-                        ft.VerticalDivider(),
-                        ft.ElevatedButton("Применить", on_click=self.apply_changes, bgcolor=ft.Colors.BLUE, color=ft.Colors.WHITE),
+                        ft.ElevatedButton("Символ ", on_click=self.add_column, icon=ft.Icons.ADD, color="white", bgcolor="blue"),
+                        ft.ElevatedButton("Символ ", on_click=self.delete_column, icon=ft.Icons.REMOVE, color="red"),
                     ], wrap=True),
-                    
+                    ft.Text("Подсказка: Дважды кликни на любую ячейку, чтобы изменить целевые переходы!", size=13, weight="bold", color="green"),
+                    ft.Divider(),
                     self.table_holder,
                 ], scroll=ft.ScrollMode.ADAPTIVE, tight=True),
                 height=CHELKA,
-            )
+            ),
+            is_scroll_controlled=True
         )
         self.app.page.open(self.table_sheet)
 

@@ -23,7 +23,7 @@ class ApplicationState:
     canvas_height: float = 450
     canvas_scale: float = 1.0
     min_canvas_scale: float = 0.5
-    max_canvas_scale: float = 2.0
+    max_canvas_scale: float = 1.7
     canvas_scale_step: float = 0.1
 
     debug_mode: bool = False 
