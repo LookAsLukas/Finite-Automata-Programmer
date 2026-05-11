@@ -222,7 +222,7 @@ class Application:
             Row(
                 [self.build_canvas_side(), self.build_control_side()],
                 spacing=5,
-                vertical_alignment=CrossAxisAlignment.START,
+                vertical_alignment=CrossAxisAlignment.STRETCH,
                 expand=True,
             )],
             spacing=10,
@@ -453,6 +453,7 @@ class Application:
                 spacing=0,
                 alignment=MainAxisAlignment.START,
                 horizontal_alignment=CrossAxisAlignment.STRETCH,
+                scroll=ScrollMode.ADAPTIVE,
             ),
             bgcolor=Colors.WHITE,
             padding=ft.padding.only(top=20, bottom=20),
