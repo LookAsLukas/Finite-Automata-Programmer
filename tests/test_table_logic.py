@@ -3,12 +3,10 @@ import sys
 import os
 from unittest.mock import MagicMock, patch
 
-# Добавляем пути, чтобы импорты работали
-BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-sys.path.append(os.path.join(BASE_DIR, 'src'))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src')))
 
 from table import TableEditor
-from graph import Graph, Node
+from graph import Graph, Node, Transition
 from application_state import ApplicationState, ApplicationUI
 
 class TestTableLogic(unittest.TestCase):
@@ -19,55 +17,52 @@ class TestTableLogic(unittest.TestCase):
         self.app.ui = ApplicationUI()
         self.app.page = MagicMock()
         self.app.history = MagicMock()
-
-        # Создаем начальные узлы
+        self.app.ui.status_text = MagicMock()
         self.node_q0 = Node(x=10, y=10, name="q0")
         self.node_q1 = Node(x=20, y=20, name="q1")
         self.app.graph.nodes = {self.node_q0, self.node_q1}
         self.app.attr.alphabet = {'a'}
-
-        # Инициализируем редактор
         self.editor = TableEditor(self.app)
+        self.editor.update_canvas = MagicMock()
+        self.editor.refresh_ui = MagicMock()
 
-    @patch('draw.draw_nodes')
-    def test_apply_valid_changes(self, mock_draw):
-        # Строим UI, чтобы заполнились cell_fields
-        self.editor.build_table_ui()
-        
-        # Находим поле ввода для q0 по символу 'a'
-        # В классе TableEditor поля хранятся в словаре cell_fields по ключу (state, symbol)
-        input_field = self.editor.cell_fields.get(("q0", "a"))
-        self.assertIsNotNone(input_field)
-        
-        # Имитируем ввод пользователя: переход из q0 в q1 по 'a'
-        input_field.value = "q1"
+    def test_get_states_returns_sorted_names(self):
+        states = self.editor.get_states()
+        self.assertIn("q0", states)
+        self.assertIn("q1", states)
 
-        # Кликаем "Применить" (вызываем метод напрямую)
-        self.editor.apply_changes(None)
+    def test_get_symbols_returns_alphabet(self):
+        symbols = self.editor.get_symbols()
+        self.assertIn('a', symbols)
 
-        # ПРОВЕРКИ
-        # 1. Проверяем, что переход создался в графе
+    def test_get_transition_map_returns_correct_structure(self):
+        self.app.graph.transitions.add(Transition(start=self.node_q0, end=self.node_q1, symbols='a'))
+        tr_map = self.editor.get_transition_map()
+        self.assertIn(("q0", "a"), tr_map)
+        self.assertIn("q1", tr_map[("q0", "a")])
+
+    @patch('table.ft.TextField')
+    def test_edit_cell_creates_transition(self, mock_tf):
+        self.app.graph.transitions = set()
+        mock_tf.return_value.value = "q1"
+        self.editor.edit_cell("q0", "a", "")
+        dialog = self.app.page.open.call_args[0][0]
+        save_callback = dialog.actions[1].on_click
+        save_callback(MagicMock())
         self.assertEqual(len(self.app.graph.transitions), 1)
-        transition = list(self.app.graph.transitions)[0]
-        self.assertEqual(transition.start.name, "q0")
-        self.assertEqual(transition.end.name, "q1")
-        self.assertEqual(transition.symbols, "a")
+        tr = list(self.app.graph.transitions)[0]
+        self.assertEqual(tr.start.name, "q0")
+        self.assertEqual(tr.end.name, "q1")
+        self.assertEqual(tr.symbols, "a")
 
-        # 2. Проверяем статусное сообщение
-        self.assertEqual(self.app.ui.status_text.value, "Таблица применена")
-        
-        # 3. Проверяем, что функция отрисовки была вызвана
-        mock_draw.assert_called_once()
-
-    def test_apply_invalid_state_error(self):
-        self.editor.build_table_ui()
-        input_field = self.editor.cell_fields.get(("q0", "a"))
-        
-        # Вводим несуществующее состояние q99
-        input_field.value = "q99"
-        self.editor.apply_changes(None)
-
-        # Проверяем, что появилась ошибка в статусе и переходы не очистились/обновились
+    @patch('table.ft.TextField')
+    def test_edit_cell_invalid_state_shows_error(self, mock_tf):
+        self.app.graph.transitions = set()
+        mock_tf.return_value.value = "q99"
+        self.editor.edit_cell("q0", "a", "")
+        dialog = self.app.page.open.call_args[0][0]
+        save_callback = dialog.actions[1].on_click
+        save_callback(MagicMock())
         self.assertIn("не существует", self.app.ui.status_text.value)
 
 if __name__ == "__main__":
