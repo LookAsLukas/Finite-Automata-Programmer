@@ -168,7 +168,6 @@ class Application:
             visible=False
         )
 
-        # ТОЛЬКО ПОТОМ создаем debug_panel
         self.ui.debug_panel = Container(
             content=Row([
                 self.ui.debug_step_back_btn,
@@ -178,7 +177,7 @@ class Application:
             padding=10,
             bgcolor=Colors.GREY_200,
             border_radius=5,
-            visible=False  # Изначально скрыт
+            visible=False  
         )
 
         info_button = ft.IconButton(
@@ -208,7 +207,7 @@ class Application:
                 )]),
             center_title=False,
             actions=[
-                self.ui.debug_panel,  # Теперь точно не None
+                self.ui.debug_panel,
                 ElevatedButton(
                     "Отладка",
                     on_click=lambda e: debug.toggle_debug_mode(self),
@@ -265,7 +264,7 @@ class Application:
         )
 
         top_content = Column([
-            Text("Визуальный автомат (NFA)", size=24, weight="bold", color=Colors.BLACK),
+            Text("Визуальный автомат", size=24, weight="bold", color=Colors.BLACK),
             Container(
                 content=gesture_area,
                 alignment=alignment.center,
