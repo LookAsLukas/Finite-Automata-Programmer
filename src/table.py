@@ -98,13 +98,23 @@ class TableEditor:
         symbols = self.symbols
         tr_map = self.get_transition_map()
         
+        COLOR_HEADER_BG = ft.Colors.BLUE_GREY_50     
+        COLOR_HEADER_TEXT = ft.Colors.BLUE_900       
+        COLOR_STATE_TEXT = ft.Colors.BLUE_GREY_900    
+        COLOR_MARKER = ft.Colors.ORANGE_ACCENT_700    
+        
+        COLOR_TF_TEXT = ft.Colors.BLACK             
+        COLOR_TF_BG = ft.Colors.GREY_100             
+        COLOR_TF_BORDER = ft.Colors.GREY_400          
+        COLOR_TF_FOCUS_BORDER = ft.Colors.BLUE_500    
+        
         columns = [
-            ft.DataColumn(ft.Text("Тип")),
-            ft.DataColumn(ft.Text("Состояние"))
+            ft.DataColumn(ft.Text("Тип", weight=ft.FontWeight.BOLD, color=COLOR_HEADER_TEXT)),
+            ft.DataColumn(ft.Text("Состояние", weight=ft.FontWeight.BOLD, color=COLOR_HEADER_TEXT))
         ] + [
             ft.DataColumn(
                 ft.GestureDetector(
-                    content=ft.Text(sym, weight=ft.FontWeight.BOLD, color="blue"),
+                    content=ft.Text(sym, weight=ft.FontWeight.BOLD, color=COLOR_HEADER_TEXT),
                     on_double_tap=lambda e, s=sym: self.edit_label(False, s)
                 )
             ) for sym in symbols
@@ -120,18 +130,18 @@ class TableEditor:
                                 self.get_state_marker(state),
                                 size=20,
                                 weight=ft.FontWeight.BOLD,
+                                color=COLOR_MARKER, 
                             ),
                             alignment=ft.alignment.center,
                             width=40,
                         ),
-
                         on_tap=lambda e, s=state: self.cycle_state_type(s)
                     )
                 ),
 
                 ft.DataCell(
                     ft.GestureDetector(
-                        content=ft.Text(state, weight=ft.FontWeight.BOLD),
+                        content=ft.Text(state, weight=ft.FontWeight.BOLD, color=COLOR_STATE_TEXT),
                         on_double_tap=lambda e, s=state: self.edit_label(True, s)
                     )
                 )
@@ -141,7 +151,6 @@ class TableEditor:
                 targets = tr_map.get((state, sym), set())
                 existing_val = ", ".join(sorted(targets, key=str))
                 
-                # Preserve edited values across refreshes
                 if (state, sym) in self.cell_fields:
                     existing_val = self.cell_fields[(state, sym)].value
 
@@ -150,7 +159,12 @@ class TableEditor:
                     width=100,
                     height=40,
                     text_align=ft.TextAlign.CENTER,
-                    content_padding=5
+                    content_padding=5,
+                    color=COLOR_TF_TEXT,
+                    bgcolor=COLOR_TF_BG,
+                    border_color=COLOR_TF_BORDER,
+                    focused_border_color=COLOR_TF_FOCUS_BORDER,
+                    cursor_color=COLOR_TF_TEXT,
                 )
 
                 self.cell_fields[(state, sym)] = tf
@@ -170,10 +184,12 @@ class TableEditor:
         self.table_holder.controls = [
             ft.Row([
                 ft.DataTable(
-                    columns=columns, rows=rows,
+                    columns=columns, 
+                    rows=rows,
                     border=ft.border.all(1, "#EEEEEE"),
                     horizontal_lines=ft.border.BorderSide(1, "#EEEEEE"),
                     vertical_lines=ft.border.BorderSide(1, "#EEEEEE"),
+                    heading_row_color=COLOR_HEADER_BG, 
                 )
             ], scroll=ft.ScrollMode.ADAPTIVE)
         ]
@@ -385,18 +401,18 @@ class TableEditor:
                 padding=20, bgcolor=ft.Colors.WHITE,
                 content=ft.Column([
                     ft.Row([
-                        ft.Text("Редактор таблицы", size=20, weight="bold"),
+                        ft.Text("Редактор таблицы", size=20, weight="bold", color = "black"),
                         ft.IconButton(
                             ft.Icons.CLOSE,
                             on_click=lambda _: self.app.page.close(self.table_sheet)
                         )
                     ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
                     ft.Row([
-                        ft.ElevatedButton("Строка +", on_click=self.add_row, icon=ft.Icons.ADD),
-                        ft.ElevatedButton("Строка -", on_click=self.delete_row, icon=ft.Icons.REMOVE, bgcolor=ft.Colors.RED_50),
+                        ft.ElevatedButton("Строка", on_click=self.add_row, icon=ft.Icons.ADD),
+                        ft.ElevatedButton("Строка", on_click=self.delete_row, icon=ft.Icons.REMOVE, bgcolor=ft.Colors.RED_50),
                         ft.VerticalDivider(),
-                        ft.ElevatedButton("Столбец +", on_click=self.add_column, icon=ft.Icons.ADD_CIRCLE),
-                        ft.ElevatedButton("Столбец -", on_click=self.delete_column, icon=ft.Icons.REMOVE_CIRCLE, bgcolor=ft.Colors.RED_50),
+                        ft.ElevatedButton("Столбец", on_click=self.add_column, icon=ft.Icons.ADD_CIRCLE),
+                        ft.ElevatedButton("Столбец", on_click=self.delete_column, icon=ft.Icons.REMOVE_CIRCLE, bgcolor=ft.Colors.RED_50),
                         ft.VerticalDivider(),
                         ft.ElevatedButton(
                             "Применить",
