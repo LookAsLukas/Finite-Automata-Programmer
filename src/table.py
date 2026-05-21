@@ -377,6 +377,10 @@ class TableEditor:
                 Transition(start=start_node, end=end_node, symbols=symbols_str)
             )
 
+        from automata_visualizer import layout_graph_nodes
+        layout_graph_nodes(self.app.graph, self.app)
+        self.app.graph.node_counter = len(self.app.graph.nodes)
+
         self.app.attr.alphabet = {s for s in self.symbols if s != EPSILON_SYMBOL}
 
         from draw import draw_nodes
