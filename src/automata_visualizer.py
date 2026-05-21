@@ -7,6 +7,89 @@ from automata.fa.nfa import NFA
 from linal import Vector2D
 
 
+def layout_graph_nodes(graph: Graph, app: Application) -> None:
+    """Place existing graph nodes using the same igraph layout as automaton import."""
+    nodes = sorted(graph.nodes, key=lambda node: str(node.name))
+    if not nodes:
+        return
+
+    node_to_ind = {node: ind for ind, node in enumerate(nodes)}
+    transitions = [
+        (node_to_ind[transition.start], node_to_ind[transition.end])
+        for transition in graph.transitions
+        if transition.start in node_to_ind and transition.end in node_to_ind
+    ]
+
+    coords = _calculate_layout_coords(
+        [node.name for node in nodes],
+        transitions,
+        app,
+    )
+
+    for node, (x, y) in zip(nodes, coords):
+        node.x = x
+        node.y = y
+
+
+def _calculate_layout_coords(names, transitions, app: Application):
+    if not names:
+        return []
+
+    igraph = ig.Graph(directed=True)
+    igraph.add_vertices(names)
+    igraph.add_edges(transitions)
+    try:
+        coords = igraph.layout_fruchterman_reingold().coords
+    except Exception:
+        coords = [
+            Vector2D.from_phi_r(i / len(names) * 2 * math.pi, 1).to_tuple()
+            for i in range(len(names))
+        ]
+
+    return _fit_coords_to_canvas(coords, app)
+
+
+def _fit_coords_to_canvas(coords, app: Application):
+    if not coords:
+        return []
+
+    node_radius = getattr(getattr(app, "config", None), "node_radius", 30)
+    if not isinstance(node_radius, (int, float)):
+        node_radius = 30
+
+    canvas_width = getattr(getattr(app, "attr", None), "canvas_width", 700)
+    if not isinstance(canvas_width, (int, float)):
+        canvas_width = 700
+
+    canvas_height = getattr(getattr(app, "attr", None), "canvas_height", 450)
+    if not isinstance(canvas_height, (int, float)):
+        canvas_height = 450
+
+    padding_coef = 3
+    frame_bottom_x = padding_coef * node_radius
+    frame_bottom_y = padding_coef * node_radius
+    frame_width = canvas_width - padding_coef * 2 * node_radius
+    frame_height = canvas_height - padding_coef * 2 * node_radius
+
+    picture_bottom_x = min(x for x, _ in coords)
+    picture_bottom_y = min(y for _, y in coords)
+    picture_width = max(x for x, _ in coords) - picture_bottom_x
+    picture_height = max(y for _, y in coords) - picture_bottom_y
+
+    if picture_width == 0:
+        picture_width = 1
+    if picture_height == 0:
+        picture_height = 1
+
+    return [
+        (
+            (x - picture_bottom_x) / picture_width * frame_width + frame_bottom_x,
+            (y - picture_bottom_y) / picture_height * frame_height + frame_bottom_y,
+        )
+        for x, y in coords
+    ]
+
+
 def automaton_to_graph(automaton: NFA, app: Application) -> Graph:
     """
     IMPORTANT: automaton must have a fantom "" named node, that
@@ -25,40 +108,7 @@ def automaton_to_graph(automaton: NFA, app: Application) -> Graph:
         for end in set().union(*automaton.transitions[start].values())
     ]
 
-    igraph = ig.Graph(directed=True)
-    igraph.add_vertices(nodes)
-    igraph.add_edges(transitions)
-    try:
-        coords = igraph.layout_fruchterman_reingold().coords
-    except Exception:
-        coords = [
-            Vector2D.from_phi_r(i / len(nodes) * 2 * math.pi, 1).to_tuple()
-            for i in range(len(nodes))
-        ]
-
-    padding_coef = 3
-    frame_bottom_x = padding_coef * app.config.node_radius
-    frame_bottom_y = padding_coef * app.config.node_radius
-    frame_width = app.attr.canvas_width - padding_coef * 2 * app.config.node_radius
-    frame_height = app.attr.canvas_height - padding_coef * 2 * app.config.node_radius
-
-    picture_bottom_x = min(x for x, _ in coords)
-    picture_bottom_y = min(y for _, y in coords)
-    picture_width = max(x for x, _ in coords) - picture_bottom_x
-    picture_height = max(y for _, y in coords) - picture_bottom_y
-
-    if picture_width == 0:
-        picture_width = 1
-    if picture_height == 0:
-        picture_height = 1
-
-    coords = [
-        (
-            (x - picture_bottom_x) / picture_width * frame_width + frame_bottom_x if picture_width else frame_width / 2 + app.config.node_radius,
-            (y - picture_bottom_y) / picture_height * frame_height + frame_bottom_y if picture_height else frame_height / 2 + app.config.node_radius,
-        )
-        for x, y in coords
-    ]
+    coords = _calculate_layout_coords(nodes, transitions, app)
 
     nodes = [
         Node(
