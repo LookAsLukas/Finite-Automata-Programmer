@@ -3,6 +3,9 @@
 Finite Automata Programmer (FAP) - is an IDE for DFAs, NFAs and e-NFAs. It provides a user friendly
 graphical interface for building, running and debugging automata. It also has a regex-FA converter
 (and vise-versa) and a DFA minimalizer  
+## System requirements
+- 2+ core processor
+- Any Python 3.10 capable system
 ## Installation and build
 #### Note: Linux requires _zenity_ for filesystem interactions  
 ```
