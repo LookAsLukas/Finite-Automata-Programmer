@@ -15,9 +15,7 @@ sudo apt install zenity
 sudo pacman -S zenity
 ```
 \
-For a quick ready-to-go usage just download the executable file from Releases
-
-For building it yourself:
+For building an executable:
 1. Clone the repo
 2. Run `run_build_linux.sh` if on Linux or `run_build_windows.bat` if on Windows
   
